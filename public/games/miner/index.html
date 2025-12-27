@@ -4,7 +4,44 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
   <title>爷爷的黄金矿工 - 会算账版</title>
-  <style>
+  <style> 
+  #monkey-entrance{
+  position:absolute;
+  left:50%;
+  top: calc(clamp(72px, 10vh, 110px) + 110px);
+  transform:translateX(-50%);
+  background:#fff;
+  border:10px solid #FF6F00;
+  border-radius:44px;
+  padding:18px 26px;
+  font-weight:1000;
+  color:#D84315;
+  font-size:clamp(26px, 4vw, 54px);
+  box-shadow:0 18px 0 rgba(0,0,0,0.35);
+  z-index:90;
+  white-space:nowrap;
+  animation: monkeyPop 0.22s ease-out, monkeyPulse 0.35s ease-in-out 0.22s infinite alternate;
+}
+
+@keyframes monkeyPop{
+  from{ transform:translateX(-50%) scale(0.6) rotate(-4deg); opacity:0; }
+  to  { transform:translateX(-50%) scale(1.0) rotate(0deg); opacity:1; }
+}
+@keyframes monkeyPulse{
+  from{ transform:translateX(-50%) scale(1.0); }
+  to  { transform:translateX(-50%) scale(1.06); }
+}
+
+.shake-screen{ animation: screenShake 0.35s ease-in-out; }
+@keyframes screenShake{
+  0%{ transform:translate(0,0); }
+  20%{ transform:translate(-10px, 6px); }
+  40%{ transform:translate(12px,-6px); }
+  60%{ transform:translate(-8px,-4px); }
+  80%{ transform:translate(10px, 5px); }
+  100%{ transform:translate(0,0); }
+}
+
     :root{
       --bg:#3E2723;
       --ui:#5D4037;
@@ -239,6 +276,8 @@
       display:none;
       max-width:min(520px, 92vw);
     }
+
+
   </style>
 </head>
 
@@ -271,7 +310,11 @@
       <div id="hint-bubble">👉 点一下出钩子<br>👉 再点一下加速收回</div>
       <div id="toast"></div>
 
-      <canvas id="gameCanvas"></canvas>
+      <!-- ✅ 猴子出场字幕层 -->
+      <div id="monkey-entrance" style="display:none;"></div>
+
+<canvas id="gameCanvas"></canvas>
+
     </div>
 
     <!-- Modal -->
@@ -381,9 +424,14 @@
   // 本地音效（找不到也不报错）
   const sfxCatch = new Audio("./assets/correct.mp3");
   sfxCatch.preload = "auto";
+
+  const sfxMonkey = new Audio("./assets/monkey_hey.mp3");
+  sfxMonkey.preload = "auto";
+
   function playSfx(a){
     try{ a.currentTime = 0; a.play().catch(()=>{}); }catch(e){}
   }
+
 
   const TYPES = {
     GOLD_XL: { score: 800, weight: 3, size: 70, emoji: "💰", name:"大钱袋" },
@@ -626,6 +674,12 @@
     if(navigator.vibrate) navigator.vibrate(80);
   }
 
+  function monkeyClear(item){
+  // ✅ 不加分，只做效果（你也可以换更夸张的字）
+  showFloatText("💨 清场！");
+}
+
+  
   function showFloatText(text){
     const el = document.createElement("div");
     el.className = "float-score";
@@ -654,17 +708,40 @@
     }
   }
 
+
+
   function startMonkeySweep(){
-    if(gameState === STATE.SWEEP) return;
-    gameState = STATE.SWEEP;
+  if(gameState === STATE.SWEEP) return;
+  gameState = STATE.SWEEP;
+  missStreak = 0; // ✅ 猴子救场后把空钩计数清掉
 
-    elMonkey.style.opacity = "0";
-    toast("🐵 爷爷我来啦！", 1600);
+  // 隐藏 DOM 猴子（因为我们用 canvas 画一只移动猴子）
+  elMonkey.style.opacity = "0";
 
-    monkeyX = width/2 + 140;
-    monkeyY = 150;
-    monkeyTarget = null;
-  }
+  // ✅ 出场字幕（夸张）
+  const entrance = document.getElementById("monkey-entrance");
+  entrance.textContent = "🐵✨ 爷爷我来啦！！！";
+  entrance.style.display = "block";
+  setTimeout(()=> entrance.style.display = "none", 1200);
+
+  // ✅ 抖屏
+  const stage = document.getElementById("stage");
+  stage.classList.remove("shake-screen");
+  void stage.offsetWidth;
+  stage.classList.add("shake-screen");
+  setTimeout(()=> stage.classList.remove("shake-screen"), 420);
+
+  // ✅ 声效
+  playSfx(sfxMonkey);
+
+  // 初始位置（从右侧冲进来）
+  monkeyX = width + 60;
+  monkeyY = 150;
+  monkeyTarget = null;
+
+  toast("🐵 猴子来帮忙啦！", 1200);
+}
+
 
   function updateMonkeySweep(){
     // 找最近的“好东西”
@@ -705,8 +782,17 @@
       monkeyX = monkeyTarget.x;
       monkeyY = monkeyTarget.y;
       monkeyTarget.active = false;
-      processCatch(monkeyTarget);
+      monkeyClear(monkeyTarget);     // ✅ 不加分
       monkeyTarget = null;
+      // ✅ 清完“好东西”就直接过关（开下一关）
+      const remainGood = items.filter(i => i.active && (i.score > 20 || i.score === 0)).length;
+      if(remainGood === 0){
+        setTimeout(winLevel, 600);
+        gameState = STATE.STOP;
+        elMonkey.style.opacity = "0.92";  // 把 DOM 猴子显示回来
+        return;
+    }
+
     }else{
       const a = Math.atan2(dy, dx);
       monkeyX += Math.cos(a) * monkeySpeed;
