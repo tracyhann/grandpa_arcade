@@ -3,6 +3,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, RefreshCw, Maximize2 } from "lucide-react";
 import { getGameById } from "../data/games";
 
+function isIOS() {
+  if (typeof navigator === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+
 export default function Game() {
   const nav = useNavigate();
   const { id } = useParams();
@@ -24,24 +29,36 @@ export default function Game() {
     date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 
   const reloadIframe = () => {
-    // 比 window.location.reload() 更温柔：只刷新 iframe
     const iframe = containerRef.current?.querySelector("iframe");
-    if (iframe) iframe.src = iframe.src;
+    if (!iframe) return;
+    // 只刷新 iframe（不会重载整个 React 页面）
+    iframe.src = iframe.src;
   };
 
   const goFullscreen = async () => {
+    // iOS Safari 很多情况下不支持 requestFullscreen，做降级提示
+    if (isIOS()) {
+      alert("iPad 上建议用“添加到主屏幕”获得更接近全屏的体验 🙂");
+      return;
+    }
+
     const el = containerRef.current;
     if (!el) return;
-    if (document.fullscreenElement) {
-      await document.exitFullscreen();
-    } else {
-      await el.requestFullscreen?.();
+
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await el.requestFullscreen?.();
+      }
+    } catch {
+      // 忽略：有些浏览器策略会阻止
     }
   };
 
   if (!game) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-10 text-slate-800">
+      <div className="min-h-[100dvh] bg-white flex flex-col items-center justify-center p-10 text-slate-800">
         <div className="text-6xl font-black mb-6">找不到这个游戏</div>
         <button
           onClick={() => nav("/")}
@@ -54,60 +71,107 @@ export default function Game() {
   }
 
   return (
-    <div className="fixed inset-0 bg-white flex flex-col select-none overflow-hidden">
-      <div className="bg-pink-500 h-32 md:h-40 px-8 md:px-14 flex items-center justify-between shadow-xl z-50">
+    <div
+      className="game-shell min-h-[100dvh] bg-white flex flex-col overflow-hidden select-none"
+      style={{
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
+      {/* Top bar */}
+      <div
+        className="topbar bg-pink-500 px-4 md:px-6 flex items-center justify-between shadow-xl z-50"
+        style={{
+          height: "clamp(64px, 9vh, 100px)",
+        }}
+      >
         <button
           onClick={() => nav("/")}
-          className="flex items-center gap-6 bg-red-500 active:bg-red-700 text-white font-black py-5 md:py-8 px-10 md:px-16 rounded-[60px] text-4xl md:text-6xl border-b-[10px] border-red-800 shadow-lg"
+          className="back-btn flex items-center gap-3 bg-red-500 active:bg-red-700 text-white font-black border-b-[8px] border-red-800 shadow-lg"
+          style={{
+            fontSize: "clamp(22px, 2.8vw, 40px)",
+            padding: "clamp(10px, 1.6vh, 16px) clamp(16px, 2.2vw, 28px)",
+            borderRadius: "clamp(22px, 3vw, 40px)",
+          }}
           aria-label="返回首页"
         >
-          <ArrowLeft strokeWidth={8} className="w-12 h-12 md:w-20 md:h-20" />
+          <ArrowLeft strokeWidth={8} className="w-8 h-8 md:w-10 md:h-10" />
           返回
         </button>
 
-        <h2 className="text-white text-5xl md:text-7xl font-black hidden lg:block drop-shadow-md">
+        <h2 className="title text-white font-black hidden lg:block drop-shadow-md"
+            style={{ fontSize: "clamp(22px, 2.6vw, 44px)" }}>
           正在玩：{game.title}
         </h2>
 
-        <div className="flex items-center gap-6 md:gap-8">
-          <span className="text-pink-100 text-4xl font-bold hidden md:block">
+        <div className="flex items-center gap-3 md:gap-4">
+          <span
+            className="time text-pink-100 font-bold hidden md:block"
+            style={{ fontSize: "clamp(18px, 2vw, 34px)" }}
+          >
             {formatTime(currentTime)}
           </span>
 
           <button
             onClick={goFullscreen}
-            className="p-6 md:p-8 bg-pink-400 rounded-full text-white active:bg-pink-300 border-4 border-pink-200 shadow-lg"
+            className="icon-btn bg-pink-400 text-white active:bg-pink-300 border-4 border-pink-200 shadow-lg"
+            style={{
+              width: "clamp(48px, 6vh, 72px)",
+              height: "clamp(48px, 6vh, 72px)",
+              borderRadius: "9999px",
+            }}
             aria-label="全屏/退出全屏"
             title="全屏"
           >
-            <Maximize2 className="w-12 h-12 md:w-16 md:h-16" strokeWidth={6} />
+            <Maximize2 className="mx-auto" strokeWidth={6} />
           </button>
 
           <button
             onClick={reloadIframe}
-            className="p-6 md:p-8 bg-pink-400 rounded-full text-white active:bg-pink-300 border-4 border-pink-200 shadow-lg"
+            className="icon-btn bg-pink-400 text-white active:bg-pink-300 border-4 border-pink-200 shadow-lg"
+            style={{
+              width: "clamp(48px, 6vh, 72px)",
+              height: "clamp(48px, 6vh, 72px)",
+              borderRadius: "9999px",
+            }}
             aria-label="刷新游戏"
             title="刷新"
           >
-            <RefreshCw className="w-12 h-12 md:w-16 md:h-16" strokeWidth={6} />
+            <RefreshCw className="mx-auto" strokeWidth={6} />
           </button>
         </div>
       </div>
 
-      <div ref={containerRef} className="flex-1 relative bg-slate-100">
+      {/* Game area */}
+      <div ref={containerRef} className="game-area flex-1 relative bg-slate-100">
         <iframe
           src={game.url}
-          className="w-full h-full border-none"
+          className="absolute inset-0 w-full h-full border-none"
           title={game.title}
           allow="fullscreen; autoplay; gamepad"
         />
 
-        <div className="absolute top-10 left-10 animate-bounce pointer-events-none opacity-90">
-          <div className="bg-yellow-400 text-slate-900 py-6 px-12 rounded-[50px] text-2xl md:text-4xl font-black shadow-2xl border-[8px] border-white flex items-center gap-4">
+        {/* Exit hint bubble: auto-hide on landscape or short height */}
+        <div className="exit-bubble absolute top-4 left-4 md:top-6 md:left-6 pointer-events-none opacity-90">
+          <div
+            className="bg-yellow-400 text-slate-900 font-black shadow-2xl border-[6px] border-white flex items-center gap-3"
+            style={{
+              padding: "clamp(10px, 1.6vh, 18px) clamp(14px, 2vw, 28px)",
+              borderRadius: "clamp(18px, 2.6vw, 40px)",
+              fontSize: "clamp(16px, 2vw, 28px)",
+            }}
+          >
             ⬅️ 累了点这里返回
           </div>
         </div>
       </div>
+
+      {/* Auto responsive rules */}
+      <style>{`
+        @media (orientation: landscape), (max-height: 720px) {
+          .exit-bubble { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }
