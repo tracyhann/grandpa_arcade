@@ -1,4 +1,7 @@
 # Grandpa Arcade (爷爷的游戏厅) 🎮❤️
+<p align="center">
+  <img src="public/og.png" alt="爷爷的游戏厅像素插画" width="720" />
+</p>
 
 A tiny, warm web arcade made for my 96-year-old grandpa.
 
