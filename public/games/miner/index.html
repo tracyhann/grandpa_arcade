@@ -39,7 +39,7 @@
 
     /* 顶部栏：自适应高度，iPad 横屏不占太多 */
     #top-bar{
-      height:clamp(72px, 10vh, 110px);
+      height:clamp(72px, 12vh, 110px);
       background:var(--ui);
       border-bottom:6px solid var(--ui2);
       display:flex;
@@ -348,6 +348,9 @@
 
   let gameState = STATE.STOP;
   let paused = false;
+  let missStreak = 0;          // 连续空钩次数
+  const MISS_TO_HELP = 4;      // 4 次就帮忙
+
 
   // 分数
   let score = 0;
@@ -357,7 +360,7 @@
 
   // 钩子参数（更舒适）
   let angle = 0;
-  let angleSpeed = 0.014;
+  let angleSpeed = 0.007;
   let angleDir = 1;
 
   let hookLen = 70;
@@ -518,10 +521,10 @@
   const bags    = 1;                                        // 1
 
   // 钻石：随关卡增长但不夸张
-  const diamonds = Math.min(1 + Math.floor(lvl / 2), 4);     // 1~4
+  const diamonds = Math.min(1 + Math.floor(lvl / 2), 3);     // 1~4
 
   // 干扰项：石头少量，别太烦
-  const stones = (lvl <= 2) ? 1 : 2;                         // 1~2
+  const stones = (lvl <= 2) ? 1 : 10;                         // 1~2
 
   // 可选：白菜偶尔出现（惊喜）
   const cabbage = (Math.random() < 0.35) ? 1 : 0;            // 0~1
@@ -604,6 +607,7 @@
   }
 
   function processCatch(item){
+    missStreak = 0;
     let val = Number(item.score);
 
     if(val === 0){
@@ -772,18 +776,31 @@
 
       hookLen -= speed;
 
-      if(hookLen <= baseLen){
+      if (hookLen <= baseLen) {
         hookLen = baseLen;
         gameState = STATE.IDLE;
 
-        if(caughtItem){
-          processCatch(caughtItem);
-          caughtItem = null;
-          elMonkey.textContent = "🐵";
-        }
+        if (caughtItem) {
+            // ✅ 有抓到：正常结算 + 清零在 processCatch 里做了
+            processCatch(caughtItem);
+            caughtItem = null;
+            elMonkey.textContent = "🐵";
+            checkWinOrSweep();
+        } else {
+            // ✅ 空钩：累计一次
+            missStreak++;
+            toast(`没抓到～（${missStreak}/${MISS_TO_HELP}）`, 900);
 
-        checkWinOrSweep();
-      }
+            // ✅ 连续 4 次空钩：猴子帮忙
+            if (missStreak >= MISS_TO_HELP) {
+            missStreak = 0;
+            startMonkeySweep();
+            } else {
+            checkWinOrSweep();
+            }
+        }   
+    }
+
     }
   }
 
