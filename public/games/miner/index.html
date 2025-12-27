@@ -405,7 +405,9 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     hookX = width / 2;
-    hookY = 76;
+    // 把钩子放到人物台面下方（更清楚）
+    hookY = Math.min(170, Math.max(120, height * 0.16));
+
     maxLen = Math.sqrt(width*width + height*height);
   }
 
@@ -495,32 +497,69 @@
     requestAnimationFrame(loop);
   }
 
-  function generateLevel(lvl){
-    items = [];
+  function generateLevel(lvl) {
+  items = [];
 
-    const addItem = (typeDef) => {
-      const item = { ...typeDef };
-      item.x = Math.random() * (width - 120) + 60;
-      item.y = Math.random() * (height - 420) + 290;
-      item.active = true;
-      item.score = Number(item.score);
-      items.push(item);
-    };
+  const addItem = (typeDef) => {
+    const item = { ...typeDef };
+    item.x = Math.random() * (width - 120) + 60;
+    item.y = Math.random() * (height - 420) + 290;
+    item.active = true;
+    item.score = Number(item.score);
+    items.push(item);
+  };
 
-    // 基础铺满 + 难度递增
-    for(let i=0;i<3;i++) addItem(TYPES.GOLD_XL);
-    for(let i=0;i<3;i++) addItem(TYPES.INGOT);
-    for(let i=0;i<3;i++) addItem(TYPES.BAG);
-    for(let i=0;i<2;i++) addItem(TYPES.GIFT);
-    for(let i=0;i<2;i++) addItem(TYPES.PEACH);
-    for(let i=0;i<2;i++) addItem(TYPES.STONE);
+  // ---- 总体数量控制：8~12 个（随关卡略涨）----
+  // 基础宝物：让每关都有“赚大钱”的可能
+  const bigGold = Math.max(1, 2 - Math.floor(lvl / 4));     // 1~2
+  const ingots  = 1;                                        // 1
+  const peaches = 1;                                        // 1
+  const gifts   = (lvl >= 2) ? 1 : 0;                        // 0~1
+  const bags    = 1;                                        // 1
 
-    if(Math.random() > 0.45) addItem(TYPES.CABBAGE);
+  // 钻石：随关卡增长但不夸张
+  const diamonds = Math.min(1 + Math.floor(lvl / 2), 4);     // 1~4
 
-    // 每关多一点钻石，但不要刷屏
-    const diamonds = Math.min(2 + Math.floor(lvl/2), 6);
-    for(let i=0;i<diamonds;i++) addItem(TYPES.DIAMOND);
+  // 干扰项：石头少量，别太烦
+  const stones = (lvl <= 2) ? 1 : 2;                         // 1~2
+
+  // 可选：白菜偶尔出现（惊喜）
+  const cabbage = (Math.random() < 0.35) ? 1 : 0;            // 0~1
+
+  // ---- 生成 ----
+  for (let i = 0; i < bigGold; i++) addItem(TYPES.GOLD_XL);
+  for (let i = 0; i < ingots; i++) addItem(TYPES.INGOT);
+  for (let i = 0; i < bags; i++) addItem(TYPES.BAG);
+  for (let i = 0; i < gifts; i++) addItem(TYPES.GIFT);
+  for (let i = 0; i < peaches; i++) addItem(TYPES.PEACH);
+  for (let i = 0; i < cabbage; i++) addItem(TYPES.CABBAGE);
+  for (let i = 0; i < diamonds; i++) addItem(TYPES.DIAMOND);
+  for (let i = 0; i < stones; i++) addItem(TYPES.STONE);
+
+  // ---- 防止重叠：简单做一下“推开” ----
+  // 老人视觉更清楚，也减少“一钩多中”造成的无脑爽
+  for (let a = 0; a < items.length; a++) {
+    for (let b = a + 1; b < items.length; b++) {
+      const ia = items[a], ib = items[b];
+      const minDist = ia.size + ib.size + 28;
+      const dx = ib.x - ia.x;
+      const dy = ib.y - ia.y;
+      const d = Math.hypot(dx, dy);
+      if (d < minDist) {
+        // 把 b 往外推一点点
+        const push = (minDist - d) + 6;
+        const ang = Math.atan2(dy, dx);
+        ib.x += Math.cos(ang) * push;
+        ib.y += Math.sin(ang) * push;
+
+        // clamp 到画布内
+        ib.x = Math.max(60, Math.min(width - 60, ib.x));
+        ib.y = Math.max(240, Math.min(height - 60, ib.y));
+      }
+    }
   }
+}
+
 
   function updateScoreAnimation(){
     if(displayScore < score){
@@ -768,22 +807,26 @@
     ctx.beginPath();
     ctx.moveTo(hookX, hookY);
     ctx.lineTo(endX, endY);
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = "#5D4037";
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = "#FFD54F"; // 金色绳
+    ctx.shadowColor = "rgba(255, 213, 79, 0.45)";
+    ctx.shadowBlur = 10;
     ctx.stroke();
+    ctx.shadowBlur = 0;
+
 
     // hook head
     ctx.save();
     ctx.translate(endX, endY);
     ctx.rotate(-angle);
 
-    ctx.fillStyle = "#795548";
+    ctx.fillStyle = "#FFC107"; // 金色钩头
     ctx.beginPath();
     ctx.arc(0, 0, 18, 0, Math.PI*2);
     ctx.fill();
 
     ctx.lineWidth = 10;
-    ctx.strokeStyle = "#8D6E63";
+    ctx.strokeStyle = "#FFB300";
     ctx.lineCap = "round";
 
     ctx.beginPath();
