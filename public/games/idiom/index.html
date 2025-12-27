@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>爷爷的成语接龙 - 随机挑战版</title>
+  <style>
+    body {
+      font-family: -apple-system, "Microsoft YaHei", "Heiti SC", sans-serif;
+      background-color: #FEF9E7;
+      color: #4A4A4A;
+      margin: 0; padding: 20px;
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 100vh; text-align: center;
+      -webkit-user-select: none; user-select: none;
+    }
+    header {
+      margin-bottom: 20px; border-bottom: 3px solid #D35400; padding-bottom: 10px;
+      width: 100%; max-width: 680px;
+    }
+    h1 { font-size: 2.8rem; color: #C0392B; margin: 10px 0; }
+    p.subtitle { font-size: 1.5rem; color: #7F8C8D; font-weight: bold; }
+
+    #game-container {
+      background-color: #FFF; border-radius: 25px; padding: 30px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      width: 95%; max-width: 720px; margin-bottom: 20px;
+    }
+
+    .progress { font-size: 1.5rem; margin-bottom: 20px; color: #D35400; font-weight: bold; }
+
+    .idiom-box { display: flex; justify-content: center; gap: 15px; margin-bottom: 28px; }
+    .char-block {
+      width: 84px; height: 84px; background-color: #FAD7A0; border-radius: 15px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3.5rem; font-weight: 900; color: #333; border: 3px solid #E67E22;
+    }
+    .char-block.empty { background-color: #ECF0F1; border: 3px dashed #95A5A6; color: #C0392B; }
+
+    .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+
+    button.option-btn {
+      background-color: #27AE60; color: white; border: none; padding: 22px;
+      font-size: 2.6rem; border-radius: 22px; cursor: pointer;
+      transition: transform 0.08s; box-shadow: 0 6px 0 #1E8449;
+      font-weight: 900;
+    }
+    button.option-btn:active { transform: translateY(6px); box-shadow: none; }
+    button.option-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      filter: grayscale(20%);
+    }
+
+    #message {
+      font-size: 2rem; margin-top: 22px; min-height: 70px; font-weight: 900;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .correct { color: #27AE60; } .wrong { color: #C0392B; }
+
+    .actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    #next-btn, #restart-btn {
+      padding: 18px 46px; font-size: 2rem;
+      color: white; border: none; border-radius: 60px; cursor: pointer;
+      box-shadow: 0 8px 0 rgba(0,0,0,0.18);
+      font-weight: 900;
+    }
+    #next-btn { background-color: #D35400; display: none; }
+    #next-btn:active { transform: translateY(8px); box-shadow: none; }
+
+    #restart-btn { background-color: #2E86C1; }
+    #restart-btn:active { transform: translateY(8px); box-shadow: none; }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 2.2rem; }
+      .char-block { width: 62px; height: 62px; font-size: 2.6rem; }
+      button.option-btn { font-size: 2.1rem; padding: 16px; }
+      #next-btn, #restart-btn { font-size: 1.8rem; padding: 16px 40px; }
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <h1>🎅 爷爷的成语游戏</h1>
+  <p class="subtitle">每次随机 10 题，天天不重样！</p>
+</header>
+
+<div id="game-container">
+  <div class="progress">第 <span id="current-level-num">1</span> 题 / 共 10 题</div>
+
+  <div class="idiom-box" id="idiom-display">
+    <div style="font-size:1.5rem; color:#888;">正在加载成语库...</div>
+  </div>
+
+  <div class="options-grid" id="options-area"></div>
+
+  <div id="message"></div>
+
+  <div class="actions">
+    <button id="next-btn" onclick="nextLevel()">下一题 ➔</button>
+    <button id="restart-btn" onclick="restartSet()">重新来一组 🔄</button>
+  </div>
+</div>
+
+<script>
+  let idiomDatabase = [];
+  let currentLevels = [];
+  let currentIdx = 0;
+  let isAnswered = false;
+
+  // 本地音效（推荐放到 public/games/idiom/assets/correct.mp3）
+  const correctSfx = new Audio('./assets/correct.mp3');
+  correctSfx.preload = 'auto';
+
+  function shuffleInPlace(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  async function loadIdioms() {
+    try {
+      const response = await fetch('./idioms.json', { cache: 'no-store' });
+      if (!response.ok) throw new Error('网络响应不正常');
+      const data = await response.json();
+
+      // 过滤：必须是 4 字、answerIndex 合法、options 至少 2 个
+      idiomDatabase = (Array.isArray(data) ? data : []).filter(item => {
+        if (!item || typeof item.text !== 'string') return false;
+        if ([...item.text].length !== 4) return false;
+        if (typeof item.answerIndex !== 'number' || item.answerIndex < 0 || item.answerIndex > 3) return false;
+        if (!Array.isArray(item.options) || item.options.length < 2) return false;
+        const answerChar = [...item.text][item.answerIndex];
+        return item.options.includes(answerChar);
+      });
+
+      if (idiomDatabase.length < 10) {
+        throw new Error('词库数量不足 10 条或格式不正确');
+      }
+
+      initGameSet();
+    } catch (error) {
+      console.error('加载词库失败:', error);
+      document.getElementById('idiom-display').innerHTML =
+        `<div style="color:red; font-size:1.5rem; line-height:1.4;">
+          加载词库失败了<br>
+          请检查：idioms.json 是否在同目录、格式是否正确<br>
+          <span style="font-size:1.2rem; color:#555;">（建议至少 50 条，体验更好）</span>
+        </div>`;
+      document.getElementById('options-area').innerHTML = '';
+      document.getElementById('message').innerText = '';
+    }
+  }
+
+  function getRandomLevels(num) {
+    const pool = [...idiomDatabase];
+    shuffleInPlace(pool);
+    return pool.slice(0, num);
+  }
+
+  function initGameSet() {
+    currentLevels = getRandomLevels(10);
+    currentIdx = 0;
+    renderLevel();
+  }
+
+  function restartSet() {
+    initGameSet();
+  }
+
+  function renderLevel() {
+    if (currentIdx >= currentLevels.length) {
+      showEndScreen();
+      return;
+    }
+
+    isAnswered = false;
+    document.getElementById('current-level-num').innerText = currentIdx + 1;
+
+    const messageEl = document.getElementById('message');
+    messageEl.innerText = "请点击下方文字填空";
+    messageEl.className = "";
+
+    document.getElementById('next-btn').style.display = "none";
+
+    const levelData = currentLevels[currentIdx];
+    const idiomChars = [...levelData.text];
+
+    const idiomDisplay = document.getElementById('idiom-display');
+    const optionsArea = document.getElementById('options-area');
+
+    idiomDisplay.innerHTML = "";
+    for (let i = 0; i < 4; i++) {
+      const div = document.createElement('div');
+      div.className = "char-block";
+      if (i === levelData.answerIndex) {
+        div.className += " empty";
+        div.innerText = "?";
+        div.id = "target-char";
+      } else {
+        div.innerText = idiomChars[i];
+      }
+      idiomDisplay.appendChild(div);
+    }
+
+    optionsArea.innerHTML = "";
+    const currentOptions = [...levelData.options];
+    shuffleInPlace(currentOptions);
+
+    const correctChar = idiomChars[levelData.answerIndex];
+
+    currentOptions.forEach(char => {
+      const btn = document.createElement('button');
+      btn.className = "option-btn";
+      btn.innerText = char;
+      btn.onclick = () => checkAnswer(char, correctChar, btn);
+      optionsArea.appendChild(btn);
+    });
+  }
+
+  function checkAnswer(selectedChar, correctChar, btnElement) {
+    if (isAnswered) return;
+
+    const messageEl = document.getElementById('message');
+    const targetEl = document.getElementById('target-char');
+
+    if (selectedChar === correctChar) {
+      isAnswered = true;
+
+      targetEl.innerText = correctChar;
+      targetEl.style.backgroundColor = "#27AE60";
+      targetEl.style.color = "#FFF";
+      targetEl.style.border = "3px solid #27AE60";
+
+      messageEl.innerText = "🎉 答对了！爷爷真棒！";
+      messageEl.className = "correct";
+
+      // 播放音效（用户点击触发，iOS 一般允许）
+      try {
+        correctSfx.currentTime = 0;
+        correctSfx.play();
+      } catch (e) {}
+
+      document.getElementById('next-btn').style.display = "inline-block";
+
+      const btns = document.querySelectorAll('.option-btn');
+      btns.forEach(b => b.disabled = true);
+      btnElement.disabled = false;
+      btnElement.style.opacity = "1";
+    } else {
+      messageEl.innerText = "🤔 好像不对哦，再试试？";
+      messageEl.className = "wrong";
+      btnElement.disabled = true;
+    }
+  }
+
+  function nextLevel() {
+    currentIdx++;
+    renderLevel();
+  }
+
+  function showEndScreen() {
+    const container = document.getElementById('game-container');
+    container.innerHTML = `
+      <div style="font-size:6rem;">🏆🎉</div>
+      <h2 style="color:#C0392B; font-size:3rem; margin:10px 0; font-weight:900;">挑战成功！</h2>
+      <p style="font-size:1.8rem; font-weight:900;">爷爷今天的脑力也是棒棒的！</p>
+      <p style="font-size:1.5rem; color:#7F8C8D; font-weight:900;">10道题全部完成</p>
+      <button onclick="location.reload()"
+        style="display:inline-block; margin-top:30px; padding:25px 60px; font-size:2rem;
+               background:#D35400; color:#fff; border:0; border-radius:60px; font-weight:900;
+               box-shadow:0 8px 0 rgba(0,0,0,0.18); cursor:pointer;">
+        再来一组新的
+      </button>
+    `;
+  }
+
+  loadIdioms();
+</script>
+</body>
+</html>

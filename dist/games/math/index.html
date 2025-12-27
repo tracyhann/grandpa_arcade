@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>爷爷的算数挑战：10道题</title>
+
+  <style>
+    :root{
+      --bg-color:#E3F2FD;
+      --primary:#1976D2;
+      --success:#2E7D32;
+      --danger:#D32F2F;
+      --text:#37474F;
+      --card:#ffffff;
+      --shadow: rgba(0,0,0,0.10);
+    }
+
+    html { -webkit-text-size-adjust: 100%; }
+
+    body{
+      font-family: "Microsoft YaHei", -apple-system, system-ui, sans-serif;
+      background: var(--bg-color);
+      margin: 0;
+
+      padding: max(14px, env(safe-area-inset-top))
+               max(14px, env(safe-area-inset-right))
+               max(14px, env(safe-area-inset-bottom))
+               max(14px, env(safe-area-inset-left));
+
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+
+      min-height: 100vh;
+      touch-action: manipulation;
+      user-select: none;
+      overscroll-behavior: none;
+    }
+    @supports (height: 100dvh) { body{ min-height: 100dvh; } }
+
+    header{
+      width: 100%;
+      max-width: 900px;
+      text-align:center;
+      margin-bottom: 10px;
+    }
+    h1{
+      font-size: clamp(2.1rem, 3.6vw, 3.2rem);
+      color: var(--primary);
+      margin: 8px 0 10px;
+      font-weight: 900;
+      letter-spacing: -1px;
+    }
+
+    /* 进度条 */
+    .progress-container{
+      width: min(92vw, 520px);
+      background:#BBDEFB;
+      border-radius: 999px;
+      overflow:hidden;
+      height: clamp(28px, 4vw, 40px);
+      border: 2px solid #fff;
+      position:relative;
+      margin: 0 auto 12px;
+      box-shadow: 0 6px 12px var(--shadow);
+    }
+    .progress-bar{
+      height:100%;
+      background:#4CAF50;
+      width:0%;
+      transition: width 0.35s;
+    }
+    .progress-text{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:900;
+      color:#1565C0;
+      font-size: clamp(1.1rem, 2.2vw, 1.5rem);
+    }
+
+    /* 题目卡片 */
+    .question-card{
+      width: min(94vw, 900px);
+      background: var(--card);
+      border-radius: 26px;
+      box-shadow: 0 10px 22px var(--shadow);
+      border: 5px solid #90CAF9;
+      padding: clamp(16px, 2.6vw, 28px);
+      margin: 10px 0 16px;
+      min-height: clamp(120px, 18vh, 170px);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .equation{
+      font-size: clamp(3.0rem, 7vw, 5.2rem);
+      font-weight: 900;
+      color: var(--text);
+      display:flex;
+      gap: clamp(8px, 1.8vw, 14px);
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content:center;
+    }
+
+    #input-box{
+      display:inline-flex;
+      min-width: clamp(110px, 18vw, 220px);
+      height: clamp(70px, 10vw, 100px);
+      border-bottom: 7px solid var(--text);
+      color: var(--primary);
+      align-items:center;
+      justify-content:center;
+      padding: 0 12px;
+    }
+    #input-box.empty::after{ content:'?'; color:#CFD8DC; }
+    #input-box.wrong { color: var(--danger); border-bottom-color: var(--danger); }
+
+    /* 键盘 */
+    .numpad{
+      width: min(96vw, 720px);
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: clamp(12px, 2.2vw, 18px);
+      margin-bottom: 10px;
+    }
+
+    .key-btn{
+      background:#fff;
+      border:none;
+      border-radius: 18px;
+      font-size: clamp(2.2rem, 5.2vw, 3.2rem);
+      font-weight: 900;
+      color:#455A64;
+      padding: clamp(14px, 2.6vw, 20px) 0;
+      box-shadow: 0 7px 0 #B0BEC5;
+      cursor:pointer;
+    }
+    .key-btn:active{ transform: translateY(7px); box-shadow:none; background:#ECEFF1; }
+
+    .key-clear{ background:#FFCCBC; color:#D84315; font-size: clamp(1.6rem, 3.0vw, 2.2rem); }
+    .key-submit{ background:#C8E6C9; color:#2E7D32; font-size: clamp(1.6rem, 3.0vw, 2.2rem); }
+
+    /* 底部辅助按钮（防卡关） */
+    .assist-row{
+      width: min(96vw, 720px);
+      display:flex;
+      gap: 14px;
+      justify-content:center;
+      flex-wrap: wrap;
+      margin: 8px 0 12px;
+    }
+    .assist-btn{
+      border:none;
+      border-radius: 999px;
+      padding: 14px 24px;
+      font-size: clamp(1.4rem, 2.8vw, 2.0rem);
+      font-weight: 900;
+      color:#fff;
+      cursor:pointer;
+      box-shadow: 0 8px 0 rgba(0,0,0,0.18);
+    }
+    .assist-btn:active{ transform: translateY(8px); box-shadow:none; }
+    .btn-hint{ background:#8E44AD; }
+    .btn-skip{ background:#607D8B; }
+    .btn-restart{ background:#1976D2; }
+
+    /* 弹窗 */
+    .overlay{
+      position:fixed; inset:0;
+      background: rgba(255,255,255,0.95);
+      display:none;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      z-index:100;
+      text-align:center;
+      padding: 20px;
+    }
+    .big-btn{
+      background: var(--success);
+      color:white;
+      font-size: clamp(2.0rem, 4vw, 3.0rem);
+      padding: 16px 60px;
+      border-radius: 999px;
+      border:none;
+      box-shadow: 0 10px 0 #1B5E20;
+      cursor:pointer;
+      margin-top: 18px;
+      font-weight: 900;
+      animation: popIn 0.25s;
+    }
+    .big-btn:active{ transform: translateY(10px); box-shadow:none; }
+
+    .wrong-shake{ animation: shake 0.35s; }
+    @keyframes shake{
+      0%,100%{ transform: translateX(0); }
+      25%{ transform: translateX(-10px); }
+      75%{ transform: translateX(10px); }
+    }
+    @keyframes popIn{ from{ transform: scale(0.7);} to{ transform: scale(1);} }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>🏆 爷爷的算数挑战</h1>
+    <div class="progress-container">
+      <div class="progress-bar" id="progress-bar"></div>
+      <div class="progress-text" id="progress-text">进度：0 / 10</div>
+    </div>
+  </header>
+
+  <div class="question-card" id="card">
+    <div class="equation" aria-live="polite">
+      <span id="num1">10</span>
+      <span id="symbol">+</span>
+      <span id="num2">5</span>
+      <span>=</span>
+      <div id="input-box" class="empty"></div>
+    </div>
+  </div>
+
+  <div class="numpad">
+    <button class="key-btn" onclick="pressNum(1)">1</button>
+    <button class="key-btn" onclick="pressNum(2)">2</button>
+    <button class="key-btn" onclick="pressNum(3)">3</button>
+
+    <button class="key-btn" onclick="pressNum(4)">4</button>
+    <button class="key-btn" onclick="pressNum(5)">5</button>
+    <button class="key-btn" onclick="pressNum(6)">6</button>
+
+    <button class="key-btn" onclick="pressNum(7)">7</button>
+    <button class="key-btn" onclick="pressNum(8)">8</button>
+    <button class="key-btn" onclick="pressNum(9)">9</button>
+
+    <button class="key-btn key-clear" onclick="clearInput()">清除</button>
+    <button class="key-btn" onclick="pressNum(0)">0</button>
+    <button class="key-btn key-submit" onclick="submitAnswer()">确定</button>
+  </div>
+
+  <div class="assist-row">
+    <button class="assist-btn btn-hint" onclick="showHint()">提示 💡</button>
+    <button class="assist-btn btn-skip" onclick="skipQuestion()">跳过 ➤</button>
+    <button class="assist-btn btn-restart" onclick="restartGame()">重新开始 ↺</button>
+  </div>
+
+  <div id="next-overlay" class="overlay">
+    <h2 style="font-size: clamp(3rem, 6vw, 4.6rem); color: #2E7D32; margin: 0 0 12px; font-weight: 900;">答对了！✅</h2>
+    <button class="big-btn" onclick="nextQuestion()">下一题 ➔</button>
+  </div>
+
+  <div id="finish-overlay" class="overlay">
+    <div style="font-size: clamp(5rem, 10vw, 7rem);">🏆</div>
+    <h2 style="font-size: clamp(2.4rem, 5vw, 3.6rem); color: #E65100; margin: 10px 0; font-weight: 900;">挑战完成！</h2>
+    <p id="final-text" style="font-size: clamp(1.8rem, 3.6vw, 2.4rem); color:#555; margin:0; font-weight: 900;"></p>
+    <button class="big-btn" style="background:#1976D2; box-shadow:0 10px 0 #0D47A1;" onclick="restartGame()">再玩一次 ↺</button>
+  </div>
+
+  <script>
+    let currentAnswer = 0;
+    let userInput = "";
+    let correctCount = 0;
+    let questionCount = 0;
+
+    const TARGET_COUNT = 10;
+
+    const inputBox = document.getElementById('input-box');
+    const card = document.getElementById('card');
+
+    // ✅ 本地音效（把文件放到 ./assets/ 下）
+    const sndClick   = new Audio('./assets/click.mp3');
+    const sndCorrect = new Audio('./assets/correct.mp3');
+    const sndWrong   = new Audio('./assets/wrong.mp3');
+    const sndWin     = new Audio('./assets/win.mp3');
+
+    function playSound(audio){
+      try { audio.currentTime = 0; audio.play().catch(()=>{}); } catch(e){}
+    }
+
+    // 语音播报（可选）
+    function speak(text){
+      if (!('speechSynthesis' in window)) return;
+      try{
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'zh-CN';
+        u.rate = 0.95;
+        u.pitch = 1.05;
+        window.speechSynthesis.speak(u);
+      }catch(e){}
+    }
+
+    function pressNum(num){
+      playSound(sndClick);
+      if (userInput.length >= 3) return;
+      userInput += String(num);
+      updateDisplay();
+    }
+
+    function clearInput(){
+      playSound(sndClick);
+      userInput = "";
+      updateDisplay();
+      inputBox.classList.remove('wrong');
+      card.classList.remove('wrong-shake');
+    }
+
+    function updateDisplay(){
+      if (userInput === ""){
+        inputBox.innerText = "";
+        inputBox.classList.add('empty');
+      } else {
+        inputBox.innerText = userInput;
+        inputBox.classList.remove('empty');
+      }
+    }
+
+    function updateProgress(){
+      const pct = (questionCount / TARGET_COUNT) * 100;
+      document.getElementById('progress-bar').style.width = pct + "%";
+      document.getElementById('progress-text').innerText = `进度：${questionCount} / ${TARGET_COUNT}`;
+    }
+
+    function submitAnswer(){
+      if (userInput === "") return;
+
+      const v = parseInt(userInput, 10);
+
+      if (v === currentAnswer){
+        playSound(sndCorrect);
+        correctCount++;
+        questionCount++;
+        updateProgress();
+
+        if (questionCount >= TARGET_COUNT){
+          finishGame();
+        } else {
+          document.getElementById('next-overlay').style.display = 'flex';
+        }
+      } else {
+        playSound(sndWrong);
+        inputBox.classList.add('wrong');
+        card.classList.add('wrong-shake');
+        setTimeout(() => {
+          card.classList.remove('wrong-shake');
+          userInput = "";
+          updateDisplay();
+          inputBox.classList.remove('wrong');
+        }, 650);
+      }
+    }
+
+    function showHint(){
+      // 给爷爷防卡关：直接显示正确答案但不计分
+      speak("提示来了");
+      userInput = String(currentAnswer);
+      updateDisplay();
+    }
+
+    function skipQuestion(){
+      // 不计分，但进度+1，保证不被卡住
+      speak("跳过这一题");
+      questionCount++;
+      updateProgress();
+
+      if (questionCount >= TARGET_COUNT){
+        finishGame();
+      } else {
+        nextQuestion();
+      }
+    }
+
+    function rand(min, max){
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function nextQuestion(){
+      document.getElementById('next-overlay').style.display = 'none';
+      clearInput();
+
+      // 题型比例：加减多一些，乘除少一些
+      const type = Math.random() < 0.75 ? rand(0,1) : rand(2,3);
+
+      let num1, num2, symbol;
+
+      switch(type){
+        case 0: // 加（保证 <=100）
+          num1 = rand(1, 80);
+          num2 = rand(1, 100 - num1);
+          currentAnswer = num1 + num2; symbol = "+";
+          break;
+        case 1: // 减（保证 >=0）
+          num1 = rand(10, 99);
+          num2 = rand(0, num1);
+          currentAnswer = num1 - num2; symbol = "-";
+          break;
+        case 2: // 乘（简单口算）
+          num1 = rand(2, 9); num2 = rand(2, 9);
+          currentAnswer = num1 * num2; symbol = "×";
+          break;
+        case 3: // 除（整除）
+          num2 = rand(2, 9);
+          currentAnswer = rand(2, 9);
+          num1 = num2 * currentAnswer;
+          symbol = "÷";
+          break;
+      }
+
+      document.getElementById('num1').innerText = num1;
+      document.getElementById('symbol').innerText = symbol;
+      document.getElementById('num2').innerText = num2;
+    }
+
+    function finishGame(){
+      playSound(sndWin);
+      const score = Math.round((correctCount / TARGET_COUNT) * 100);
+
+      document.getElementById('final-text').innerHTML =
+        `本次得分：<span style="color:#E65100;">${score}</span> 分<br>` +
+        `答对：${correctCount} 题`;
+
+      setTimeout(() => speak("爷爷真棒！挑战完成！"), 450);
+      document.getElementById('finish-overlay').style.display = 'flex';
+    }
+
+    function restartGame(){
+      correctCount = 0;
+      questionCount = 0;
+      updateProgress();
+      document.getElementById('finish-overlay').style.display = 'none';
+      nextQuestion();
+    }
+
+    // ✅ 键盘输入支持（iPad 外接键盘/电脑）
+    window.addEventListener('keydown', (e) => {
+      if (e.key >= '0' && e.key <= '9') pressNum(Number(e.key));
+      if (e.key === 'Backspace') clearInput();
+      if (e.key === 'Enter') submitAnswer();
+    });
+
+    // 启动
+    updateProgress();
+    nextQuestion();
+  </script>
+</body>
+</html>
