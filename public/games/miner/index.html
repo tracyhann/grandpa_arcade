@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+  <title>爷爷的黄金矿工 - 会算账版</title>
+  <style>
+    :root{
+      --bg:#3E2723;
+      --ui:#5D4037;
+      --ui2:#8D6E63;
+      --gold:#FFD54F;
+      --cream:#FFF8E1;
+      --accent:#FF6F00;
+      --danger:#D84315;
+      --ok:#2E7D32;
+    }
+
+    html,body{
+      margin:0;
+      padding:0;
+      background:var(--bg);
+      font-family:-apple-system,"Microsoft YaHei",sans-serif;
+      height:100%;
+      overflow:hidden;
+      touch-action:manipulation;
+      -webkit-user-select:none;
+      user-select:none;
+    }
+
+    /* 用 dvh 避免 iPad Safari 地址栏变化导致高度错乱 */
+    #app{
+      min-height:100dvh;
+      display:flex;
+      flex-direction:column;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* 顶部栏：自适应高度，iPad 横屏不占太多 */
+    #top-bar{
+      height:clamp(72px, 10vh, 110px);
+      background:var(--ui);
+      border-bottom:6px solid var(--ui2);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:0 16px;
+      z-index:10;
+    }
+
+    .score-box{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:150px;
+    }
+    .score-box.right{ align-items:flex-end; text-align:right; }
+
+    .label{
+      font-size:clamp(18px, 2.2vw, 28px);
+      color:#D7CCC8;
+      font-weight:900;
+      letter-spacing:1px;
+    }
+    .value{
+      font-size:clamp(34px, 4.2vw, 60px);
+      color:var(--gold);
+      font-weight:900;
+      font-family:"Courier New",monospace;
+      line-height:1;
+    }
+
+    .top-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .pill{
+      background:#fff;
+      border:4px solid #f3d2c7;
+      border-radius:999px;
+      padding:10px 14px;
+      font-weight:900;
+      color:#6d4c41;
+      font-size:clamp(16px, 2vw, 24px);
+      box-shadow:0 6px 0 rgba(0,0,0,0.15);
+      white-space:nowrap;
+    }
+
+    .btn{
+      background:var(--accent);
+      color:#fff;
+      border:none;
+      border-radius:999px;
+      padding:12px 16px;
+      font-weight:900;
+      font-size:clamp(18px, 2.3vw, 28px);
+      box-shadow:0 8px 0 #E65100;
+      cursor:pointer;
+    }
+    .btn:active{ transform:translateY(8px); box-shadow:none; }
+    .btn.secondary{ background:#455A64; box-shadow:0 8px 0 #263238; }
+    .btn.secondary:active{ box-shadow:none; }
+    .btn.good{ background:#43A047; box-shadow:0 8px 0 #1B5E20; }
+
+    /* 画布 */
+    #stage{
+      flex:1;
+      position:relative;
+      background: repeating-linear-gradient(45deg,#3E2723,#3E2723 20px,#4E342E 20px,#4E342E 40px);
+    }
+    canvas{
+      display:block;
+      width:100%;
+      height:100%;
+      touch-action:none;
+    }
+
+    /* 爷爷 & 猴子 */
+    #miner-area{
+      position:absolute;
+      top: clamp(72px, 10vh, 110px);
+      left:50%;
+      transform:translateX(-50%);
+      width:360px;
+      height:120px;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      pointer-events:none;
+      z-index:5;
+    }
+    .char{
+      font-size:clamp(64px, 7vw, 110px);
+      line-height:1;
+      filter: drop-shadow(0 6px 0 rgba(0,0,0,0.2));
+      transition: transform 0.15s;
+    }
+    #grandpa{ margin-right:18px; position:relative; top:12px; }
+    #monkey-dom{ font-size:clamp(48px, 5.5vw, 90px); opacity:0.92; transform:scaleX(-1); position:relative; bottom:6px; }
+
+    /* 提示气泡（横屏 / 低高度自动隐藏） */
+    #hint-bubble{
+      position:absolute;
+      left:16px;
+      top: calc(clamp(72px, 10vh, 110px) + 14px);
+      background:#fff;
+      border:6px solid var(--accent);
+      border-radius:28px;
+      padding:12px 16px;
+      font-weight:900;
+      color:var(--danger);
+      font-size:clamp(18px, 2.5vw, 32px);
+      box-shadow:0 10px 0 rgba(0,0,0,0.25);
+      z-index:30;
+      max-width:min(520px, 92vw);
+    }
+    @media (orientation: landscape), (max-height: 720px){
+      #hint-bubble{ display:none; }
+    }
+
+    /* 飘分 */
+    .float-score{
+      position:absolute;
+      font-size:clamp(38px, 5vw, 70px);
+      font-weight:900;
+      color:#FFFF00;
+      text-shadow:4px 4px 0 #000;
+      pointer-events:none;
+      animation: floatUp 1.2s forwards;
+      z-index:20;
+      left:50%;
+      transform:translateX(-50%);
+    }
+    @keyframes floatUp{
+      0%{ transform:translateX(-50%) translateY(0) scale(1); opacity:1; }
+      50%{ transform:translateX(-50%) translateY(-80px) scale(1.15); opacity:1; }
+      100%{ transform:translateX(-50%) translateY(-150px) scale(1); opacity:0; }
+    }
+
+    /* 弹窗 */
+    #modal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.88);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:100;
+      padding:16px;
+    }
+    .modal-content{
+      background:var(--cream);
+      border:10px solid var(--accent);
+      border-radius:40px;
+      width:min(680px, 96vw);
+      padding:28px 22px;
+      text-align:center;
+      box-shadow:0 18px 0 rgba(0,0,0,0.35);
+    }
+    .modal-content h2{
+      font-size:clamp(34px, 4.8vw, 64px);
+      margin:0 0 14px 0;
+      color:#BF360C;
+      font-weight:900;
+      letter-spacing:2px;
+    }
+    .modal-content p{
+      font-size:clamp(20px, 2.8vw, 34px);
+      color:#5D4037;
+      margin:10px 0 18px 0;
+      font-weight:900;
+      line-height:1.35;
+    }
+    .row{
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+
+    /* 小提示条 */
+    #toast{
+      position:absolute;
+      right:16px;
+      top: calc(clamp(72px, 10vh, 110px) + 14px);
+      background:rgba(255,255,255,0.92);
+      border:6px solid #f0c9b7;
+      border-radius:24px;
+      padding:10px 14px;
+      font-weight:900;
+      color:#6d4c41;
+      font-size:clamp(16px, 2vw, 24px);
+      z-index:40;
+      display:none;
+      max-width:min(520px, 92vw);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div id="top-bar">
+      <div class="score-box">
+        <div class="label">目标分数</div>
+        <div class="value" id="target-score">500</div>
+      </div>
+
+      <div class="top-actions">
+        <div class="pill" id="level-pill">第 1 关</div>
+        <button class="btn secondary" id="pause-btn">暂停</button>
+      </div>
+
+      <div class="score-box right">
+        <div class="label">当前得分</div>
+        <div class="value" id="current-score">0</div>
+      </div>
+    </div>
+
+    <div id="stage">
+      <div id="miner-area">
+        <div class="char" id="grandpa">👴</div>
+        <div style="position:absolute; bottom:0; width:190px; height:64px; background:#555; border-radius:16px; z-index:-1;"></div>
+        <div class="char" id="monkey-dom">🐵</div>
+      </div>
+
+      <div id="hint-bubble">👉 点一下出钩子<br>👉 再点一下加速收回</div>
+      <div id="toast"></div>
+
+      <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal">
+      <div class="modal-content" id="start-screen">
+        <h2>👴 爷爷的快乐矿工</h2>
+        <p>
+          满地宝贝，慢慢抓！<br>
+          分数会自动算好！<br>
+          <span style="color:#D84315;">目标达到就过关 ✅</span>
+        </p>
+        <div class="row">
+          <button class="btn good" id="start-btn">开始发财</button>
+        </div>
+      </div>
+
+      <div class="modal-content" id="level-screen" style="display:none;">
+        <h2 id="level-title">丰收啦！</h2>
+        <p id="level-msg">得分：0</p>
+        <div class="row">
+          <button class="btn good" id="next-btn">下一关</button>
+          <button class="btn secondary" id="restart-btn">重新开始</button>
+        </div>
+      </div>
+
+      <div class="modal-content" id="pause-screen" style="display:none;">
+        <h2>⏸ 已暂停</h2>
+        <p>休息一下，爷爷最棒。</p>
+        <div class="row">
+          <button class="btn good" id="resume-btn">继续玩</button>
+          <button class="btn secondary" id="back-home-btn">重新开始</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+
+  const elTarget = document.getElementById("target-score");
+  const elScore = document.getElementById("current-score");
+  const elLevel = document.getElementById("level-pill");
+  const elToast = document.getElementById("toast");
+
+  const modal = document.getElementById("modal");
+  const startScreen = document.getElementById("start-screen");
+  const levelScreen = document.getElementById("level-screen");
+  const pauseScreen = document.getElementById("pause-screen");
+
+  const btnStart = document.getElementById("start-btn");
+  const btnNext = document.getElementById("next-btn");
+  const btnRestart = document.getElementById("restart-btn");
+  const btnPause = document.getElementById("pause-btn");
+  const btnResume = document.getElementById("resume-btn");
+  const btnBackHome = document.getElementById("back-home-btn");
+
+  const elGrandpa = document.getElementById("grandpa");
+  const elMonkey = document.getElementById("monkey-dom");
+
+  let width = 0, height = 0;
+  let hookX = 0, hookY = 0;
+  let maxLen = 0;
+
+  // 游戏状态
+  const STATE = {
+    STOP: "STOP",
+    IDLE: "IDLE",
+    EXTEND: "EXTEND",
+    RETRACT: "RETRACT",
+    SWEEP: "SWEEP"
+  };
+
+  let gameState = STATE.STOP;
+  let paused = false;
+
+  // 分数
+  let score = 0;
+  let displayScore = 0;
+  let targetScore = 500;
+  let level = 1;
+
+  // 钩子参数（更舒适）
+  let angle = 0;
+  let angleSpeed = 0.014;
+  let angleDir = 1;
+
+  let hookLen = 70;
+  let baseLen = 70;
+  let hookSpeed = 9;
+  let maxSpeedBoost = 1.8; // 二次点击加速回收
+  let retractBoost = 1.0;
+
+  let caughtItem = null;
+
+  // 猴子清场
+  let monkeyX = 0, monkeyY = 0;
+  let monkeyTarget = null;
+  let monkeySpeed = 18;
+
+  let items = [];
+
+  // 本地音效（找不到也不报错）
+  const sfxCatch = new Audio("./assets/correct.mp3");
+  sfxCatch.preload = "auto";
+  function playSfx(a){
+    try{ a.currentTime = 0; a.play().catch(()=>{}); }catch(e){}
+  }
+
+  const TYPES = {
+    GOLD_XL: { score: 800, weight: 3, size: 70, emoji: "💰", name:"大钱袋" },
+    GOLD_L:  { score: 500, weight: 2, size: 60, emoji: "🌕", name:"大金币" },
+    INGOT:   { score: 666, weight: 4, size: 55, emoji: "🧈", name:"金元宝" },
+    DIAMOND: { score: 999, weight: 8, size: 40, emoji: "💎", name:"钻石" },
+    PEACH:   { score: 200, weight: 5, size: 50, emoji: "🍑", name:"仙桃" },
+    BAG:     { score: 0,   weight: 5, size: 50, emoji: "🧧", name:"红包盲盒" },
+    GIFT:    { score: 0,   weight: 5, size: 55, emoji: "🎁", name:"礼物盲盒" },
+    CABBAGE: { score: 300, weight: 4, size: 60, emoji: "🥬", name:"发财白菜" },
+    STONE:   { score: 20,  weight: 1, size: 45, emoji: "🪨", name:"小石头" }
+  };
+
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    // 让 canvas 像素密度适配 retina
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    width = Math.floor(rect.width);
+    height = Math.floor(rect.height);
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    hookX = width / 2;
+    hookY = 76;
+    maxLen = Math.sqrt(width*width + height*height);
+  }
+
+  function init(){
+    resize();
+    window.addEventListener("resize", resize, { passive: true });
+
+    canvas.addEventListener("mousedown", onTap);
+    canvas.addEventListener("touchstart", onTap, { passive: false });
+
+    btnStart.onclick = startGame;
+    btnNext.onclick = nextLevel;
+    btnRestart.onclick = restartGame;
+    btnPause.onclick = togglePause;
+    btnResume.onclick = togglePause;
+    btnBackHome.onclick = restartGame;
+
+    showModal("start");
+  }
+
+  function showModal(which){
+    modal.style.display = "flex";
+    startScreen.style.display = (which==="start") ? "block" : "none";
+    levelScreen.style.display = (which==="level") ? "block" : "none";
+    pauseScreen.style.display = (which==="pause") ? "block" : "none";
+  }
+  function hideModal(){
+    modal.style.display = "none";
+  }
+
+  function toast(msg, ms=1400){
+    elToast.textContent = msg;
+    elToast.style.display = "block";
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=> elToast.style.display="none", ms);
+  }
+
+  function setHUD(){
+    elTarget.textContent = targetScore;
+    elLevel.textContent = `第 ${level} 关`;
+  }
+
+  function startGame(){
+    score = 0;
+    displayScore = 0;
+    level = 1;
+    targetScore = 500;
+
+    elScore.textContent = "0";
+    setHUD();
+
+    paused = false;
+    hideModal();
+    startNewLevel();
+  }
+
+  function restartGame(){
+    paused = false;
+    gameState = STATE.STOP;
+    showModal("start");
+  }
+
+  function nextLevel(){
+    level++;
+    // 目标分数更平滑：逐关递增
+    targetScore += 900 + level * 120;
+    setHUD();
+
+    hideModal();
+    startNewLevel();
+  }
+
+  function startNewLevel(){
+    // reset
+    hookLen = baseLen;
+    angle = 0;
+    angleDir = 1;
+    retractBoost = 1.0;
+    caughtItem = null;
+
+    monkeyTarget = null;
+    elMonkey.style.opacity = "0.92";
+    elMonkey.textContent = "🐵";
+
+    generateLevel(level);
+    gameState = STATE.IDLE;
+    requestAnimationFrame(loop);
+  }
+
+  function generateLevel(lvl){
+    items = [];
+
+    const addItem = (typeDef) => {
+      const item = { ...typeDef };
+      item.x = Math.random() * (width - 120) + 60;
+      item.y = Math.random() * (height - 420) + 290;
+      item.active = true;
+      item.score = Number(item.score);
+      items.push(item);
+    };
+
+    // 基础铺满 + 难度递增
+    for(let i=0;i<3;i++) addItem(TYPES.GOLD_XL);
+    for(let i=0;i<3;i++) addItem(TYPES.INGOT);
+    for(let i=0;i<3;i++) addItem(TYPES.BAG);
+    for(let i=0;i<2;i++) addItem(TYPES.GIFT);
+    for(let i=0;i<2;i++) addItem(TYPES.PEACH);
+    for(let i=0;i<2;i++) addItem(TYPES.STONE);
+
+    if(Math.random() > 0.45) addItem(TYPES.CABBAGE);
+
+    // 每关多一点钻石，但不要刷屏
+    const diamonds = Math.min(2 + Math.floor(lvl/2), 6);
+    for(let i=0;i<diamonds;i++) addItem(TYPES.DIAMOND);
+  }
+
+  function updateScoreAnimation(){
+    if(displayScore < score){
+      const step = Math.ceil((score - displayScore) / 12);
+      displayScore += step;
+      elScore.textContent = displayScore;
+    }else{
+      displayScore = score;
+      elScore.textContent = displayScore;
+    }
+  }
+
+  function onTap(e){
+    if(e) e.preventDefault();
+    if(paused) return;
+    if(gameState === STATE.IDLE){
+      gameState = STATE.EXTEND;
+      retractBoost = 1.0;
+      elGrandpa.style.transform = "translateY(-6px)";
+      setTimeout(()=> elGrandpa.style.transform="", 120);
+      return;
+    }
+    // 让爷爷觉得“我还能操作”：二次点击加速回收
+    if(gameState === STATE.RETRACT){
+      retractBoost = maxSpeedBoost;
+      toast("🚀 加速收回！");
+    }
+  }
+
+  function togglePause(){
+    if(gameState === STATE.STOP) return;
+    paused = !paused;
+
+    if(paused){
+      showModal("pause");
+      btnPause.textContent = "继续";
+    }else{
+      hideModal();
+      btnPause.textContent = "暂停";
+      requestAnimationFrame(loop);
+    }
+  }
+
+  function processCatch(item){
+    let val = Number(item.score);
+
+    if(val === 0){
+      // 盲盒：更有“算账感”
+      val = Math.floor(Math.random()*700) + 200; // 200-899
+      toast(`🎁 盲盒奖励 +${val} 分！`);
+    }else{
+      toast(`${item.name} +${val} 分！`);
+    }
+
+    score = score + val;
+    showFloatText(`+${val}`);
+    playSfx(sfxCatch);
+
+    // 轻震动（支持则用）
+    if(navigator.vibrate) navigator.vibrate(80);
+  }
+
+  function showFloatText(text){
+    const el = document.createElement("div");
+    el.className = "float-score";
+    el.textContent = text;
+    el.style.top = "220px";
+    document.getElementById("stage").appendChild(el);
+    setTimeout(()=> el.remove(), 1200);
+  }
+
+  function checkWinOrSweep(){
+    // 过关：达到目标分 或 宝物抓完
+    if(score >= targetScore){
+      setTimeout(winLevel, 900);
+      return;
+    }
+
+    const remainGood = items.filter(i => i.active && (i.score > 20 || i.score === 0)).length;
+    if(remainGood === 0){
+      setTimeout(winLevel, 900);
+      return;
+    }
+
+    // 剩余太少时触发猴子帮忙（让节奏更爽）
+    if(remainGood > 0 && remainGood <= 4){
+      startMonkeySweep();
+    }
+  }
+
+  function startMonkeySweep(){
+    if(gameState === STATE.SWEEP) return;
+    gameState = STATE.SWEEP;
+
+    elMonkey.style.opacity = "0";
+    toast("🐵 爷爷我来啦！", 1600);
+
+    monkeyX = width/2 + 140;
+    monkeyY = 150;
+    monkeyTarget = null;
+  }
+
+  function updateMonkeySweep(){
+    // 找最近的“好东西”
+    if(!monkeyTarget){
+      let best = null;
+      let bestD = Infinity;
+      for(const it of items){
+        if(it.active && (it.score > 20 || it.score === 0)){
+          const d = Math.hypot(monkeyX - it.x, monkeyY - it.y);
+          if(d < bestD){ bestD = d; best = it; }
+        }
+      }
+      monkeyTarget = best;
+
+      if(!monkeyTarget){
+        // 没东西了：回到猴子位
+        const homeX = width/2 + 140, homeY = 150;
+        const dHome = Math.hypot(monkeyX-homeX, monkeyY-homeY);
+        if(dHome < 24){
+          elMonkey.style.opacity = "0.92";
+          gameState = STATE.IDLE;
+          checkWinOrSweep();
+          return;
+        }
+        const a = Math.atan2(homeY - monkeyY, homeX - monkeyX);
+        monkeyX += Math.cos(a) * monkeySpeed;
+        monkeyY += Math.sin(a) * monkeySpeed;
+        return;
+      }
+    }
+
+    // 追目标
+    const dx = monkeyTarget.x - monkeyX;
+    const dy = monkeyTarget.y - monkeyY;
+    const d = Math.hypot(dx, dy);
+
+    if(d < monkeySpeed){
+      monkeyX = monkeyTarget.x;
+      monkeyY = monkeyTarget.y;
+      monkeyTarget.active = false;
+      processCatch(monkeyTarget);
+      monkeyTarget = null;
+    }else{
+      const a = Math.atan2(dy, dx);
+      monkeyX += Math.cos(a) * monkeySpeed;
+      monkeyY += Math.sin(a) * monkeySpeed;
+    }
+  }
+
+  function winLevel(){
+    gameState = STATE.STOP;
+
+    document.getElementById("level-title").textContent = `第 ${level} 关丰收！`;
+    document.getElementById("level-msg").textContent =
+      `当前得分：${score}（目标：${targetScore}）`;
+
+    showModal("level");
+  }
+
+  function update(){
+    if(gameState === STATE.SWEEP){
+      updateMonkeySweep();
+      return;
+    }
+
+    if(gameState === STATE.IDLE){
+      angle += angleSpeed * angleDir;
+      if(angle > 1.25 || angle < -1.25) angleDir *= -1;
+      return;
+    }
+
+    if(gameState === STATE.EXTEND){
+      hookLen += hookSpeed;
+      const curX = hookX + Math.sin(angle) * hookLen;
+      const curY = hookY + Math.cos(angle) * hookLen;
+
+      // 到边界就回收
+      if(curX < 0 || curX > width || curY > height){
+        gameState = STATE.RETRACT;
+        return;
+      }
+
+      // 碰撞检测（更宽松，老人更爽）
+      for(const item of items){
+        if(!item.active) continue;
+        const dist = Math.hypot(curX - item.x, curY - item.y);
+        const hitR = item.size + 26;
+        if(dist < hitR){
+          caughtItem = item;
+          item.active = false;
+          gameState = STATE.RETRACT;
+          elMonkey.textContent = "🙌";
+          retractBoost = 1.0;
+          break;
+        }
+      }
+      return;
+    }
+
+    if(gameState === STATE.RETRACT){
+      let speed = hookSpeed * retractBoost;
+
+      if(caughtItem){
+        // 重物更慢（weight 越大越慢）
+        const w = Number(caughtItem.weight);
+        speed = speed * Math.max(0.42, Math.min(1.0, w / 7));
+        speed = Math.max(4, speed);
+      }
+
+      hookLen -= speed;
+
+      if(hookLen <= baseLen){
+        hookLen = baseLen;
+        gameState = STATE.IDLE;
+
+        if(caughtItem){
+          processCatch(caughtItem);
+          caughtItem = null;
+          elMonkey.textContent = "🐵";
+        }
+
+        checkWinOrSweep();
+      }
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0, 0, width, height);
+
+    // items
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    for(const item of items){
+      if(!item.active) continue;
+      ctx.font = `${item.size * 1.75}px Arial`;
+      ctx.fillText(item.emoji, item.x, item.y);
+    }
+
+    // hook line
+    const endX = hookX + Math.sin(angle) * hookLen;
+    const endY = hookY + Math.cos(angle) * hookLen;
+
+    ctx.beginPath();
+    ctx.moveTo(hookX, hookY);
+    ctx.lineTo(endX, endY);
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "#5D4037";
+    ctx.stroke();
+
+    // hook head
+    ctx.save();
+    ctx.translate(endX, endY);
+    ctx.rotate(-angle);
+
+    ctx.fillStyle = "#795548";
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = "#8D6E63";
+    ctx.lineCap = "round";
+
+    ctx.beginPath();
+    ctx.moveTo(-5, 0); ctx.bezierCurveTo(-35, 10, -35, 45, -5, 35);
+    ctx.moveTo( 5, 0); ctx.bezierCurveTo( 35, 10,  35, 45,  5, 35);
+    ctx.stroke();
+
+    // caught item follows hook
+    if(caughtItem){
+      ctx.font = `${caughtItem.size * 1.75}px Arial`;
+      ctx.rotate(angle);
+      ctx.fillText(caughtItem.emoji, 0, 58);
+    }
+
+    ctx.restore();
+
+    // monkey
+    if(gameState === STATE.SWEEP){
+      ctx.font = "6rem Arial";
+      ctx.fillText("🐵", monkeyX, monkeyY);
+    }
+  }
+
+  function loop(){
+    if(paused) return;
+    if(gameState === STATE.STOP) return;
+
+    update();
+    draw();
+    updateScoreAnimation();
+    requestAnimationFrame(loop);
+  }
+
+  // kick
+  init();
+})();
+</script>
+
+</body>
+</html>

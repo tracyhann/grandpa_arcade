@@ -129,5 +129,65 @@
   { "text": "上屋抽梯", "answerIndex": 3, "options": ["提", "题", "踢", "梯"] },
   { "text": "树上开花", "answerIndex": 0, "options": ["树", "数", "书", "术"] },
   { "text": "反客为主", "answerIndex": 1, "options": ["刻", "客", "课", "克"] },
-  { "text": "走为上计", "answerIndex": 3, "options": ["记", "纪", "技", "计"] }
+  { "text": "走为上计", "answerIndex": 3, "options": ["记", "纪", "技", "计"] },
+  { "text": "画龙点睛", "answerIndex": 3, "options": ["睛", "精", "晴", "惊"] },
+  { "text": "水到渠成", "answerIndex": 2, "options": ["去", "曲", "渠", "取"] },
+  { "text": "锦上添花", "answerIndex": 1, "options": ["帖", "添", "填", "甜"] },
+  { "text": "雪中送炭", "answerIndex": 2, "options": ["谈", "坦", "炭", "碳"] },
+  { "text": "胸有成竹", "answerIndex": 3, "options": ["逐", "筑", "竹", "著"] },
+
+  { "text": "循序渐进", "answerIndex": 2, "options": ["近", "尽", "渐", "建"] },
+  { "text": "持之以恒", "answerIndex": 3, "options": ["衡", "恒", "痕", "恒"] },
+  { "text": "因势利导", "answerIndex": 1, "options": ["事", "势", "式", "试"] },
+  { "text": "举一反三", "answerIndex": 2, "options": ["返", "烦", "反", "范"] },
+  { "text": "融会贯通", "answerIndex": 3, "options": ["同", "统", "痛", "通"] },
+
+  { "text": "按部就班", "answerIndex": 1, "options": ["步", "部", "布", "捕"] },
+  { "text": "井井有条", "answerIndex": 3, "options": ["跳", "调", "条", "迢"] },
+  { "text": "精益求精", "answerIndex": 2, "options": ["竟", "静", "益", "忆"] },
+  { "text": "见微知著", "answerIndex": 3, "options": ["着", "祝", "诸", "著"] },
+  { "text": "深思熟虑", "answerIndex": 2, "options": ["录", "律", "虑", "绿"] },
+
+  { "text": "恰到好处", "answerIndex": 1, "options": ["导", "到", "倒", "道"] },
+  { "text": "名副其实", "answerIndex": 1, "options": ["付", "副", "负", "符"] },
+  { "text": "相辅相成", "answerIndex": 3, "options": ["城", "程", "呈", "成"] },
+  { "text": "别出心裁", "answerIndex": 2, "options": ["才", "材", "裁", "财"] },
+  { "text": "层出不穷", "answerIndex": 3, "options": ["穷", "琼", "穹", "穷"] },
+
+  { "text": "耳目一新", "answerIndex": 2, "options": ["心", "辛", "新", "欣"] },
+  { "text": "独具匠心", "answerIndex": 2, "options": ["将", "江", "匠", "讲"] },
+  { "text": "妙趣横生", "answerIndex": 3, "options": ["声", "生", "升", "生"] },
+  { "text": "引人入胜", "answerIndex": 3, "options": ["剩", "圣", "盛", "胜"] },
+  { "text": "言之有理", "answerIndex": 3, "options": ["礼", "里", "理", "力"] },
+
+  { "text": "一目了然", "answerIndex": 3, "options": ["燃", "染", "然", "冉"] },
+  { "text": "恍然大悟", "answerIndex": 2, "options": ["勿", "误", "悟", "务"] },
+  { "text": "不言而喻", "answerIndex": 3, "options": ["遇", "欲", "裕", "喻"] },
+  { "text": "迎刃而解", "answerIndex": 3, "options": ["解", "皆", "界", "解"] },
+  { "text": "顺理成章", "answerIndex": 3, "options": ["张", "障", "彰", "章"] },
+
+  { "text": "水乳交融", "answerIndex": 3, "options": ["容", "溶", "荣", "融"] },
+  { "text": "各得其所", "answerIndex": 3, "options": ["缩", "索", "所", "锁"] },
+  { "text": "相得益彰", "answerIndex": 3, "options": ["章", "障", "彰", "章"] },
+  { "text": "恰如其分", "answerIndex": 3, "options": ["纷", "芬", "分", "氛"] },
+  { "text": "游刃有余", "answerIndex": 3, "options": ["鱼", "于", "余", "与"] },
+
+  { "text": "循循善诱", "answerIndex": 3, "options": ["右", "又", "友", "诱"] },
+  { "text": "由浅入深", "answerIndex": 3, "options": ["深", "伸", "申", "身"] },
+  { "text": "顺水推舟", "answerIndex": 3, "options": ["周", "州", "舟", "洲"] },
+  { "text": "因材施教", "answerIndex": 1, "options": ["才", "材", "财", "裁"] },
+  { "text": "各显其能", "answerIndex": 3, "options": ["能", "农", "浓", "隆"] },
+
+  { "text": "举足轻重", "answerIndex": 2, "options": ["忠", "钟", "重", "众"] },
+  { "text": "循规蹈矩", "answerIndex": 3, "options": ["距", "拒", "矩", "聚"] },
+  { "text": "不谋而合", "answerIndex": 3, "options": ["和", "何", "河", "合"] },
+  { "text": "有条不紊", "answerIndex": 3, "options": ["稳", "闻", "紊", "文"] },
+  { "text": "恰如其分", "answerIndex": 3, "options": ["份", "芬", "分", "氛"] },
+
+  { "text": "水涨船高", "answerIndex": 2, "options": ["搞", "告", "高", "稿"] },
+  { "text": "因地制宜", "answerIndex": 3, "options": ["依", "衣", "医", "宜"] },
+  { "text": "顺势而为", "answerIndex": 3, "options": ["围", "维", "违", "为"] },
+  { "text": "言简意赅", "answerIndex": 3, "options": ["概", "慨", "该", "赅"] },
+  { "text": "通俗易懂", "answerIndex": 3, "options": ["动", "东", "懂", "冬"] }
+
 ]
