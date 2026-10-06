@@ -57,7 +57,7 @@ export const GAMES_LIST = [
   },
   {
     id: "miner",
-    title: "快乐矿工 COMING SOON",
+    title: "快乐矿工",
     hint: "挖大金子",
     iconKey: "miner",
     iconClass: "text-amber-500",
