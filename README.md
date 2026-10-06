@@ -33,6 +33,15 @@ Just a calm place to play a few friendly mini-games every day.
 
 ---
 
+## 📱 Grandpa's iPad
+
+<p align="center">
+  <img src="docs/screenshots/ipad-home-1.jpg" alt="Grandpa's iPad home screen with a Chinese calendar, Beijing and Los Angeles clocks, weather, and big tiles for video calls, phone, messages and font size" width="49%" />
+  <img src="docs/screenshots/ipad-home-2.jpg" alt="Grandpa's iPad home screen with big tiles for camera, selfie, TV, games and web, an AI assistant, an aquarium widget and news" width="49%" />
+</p>
+
+---
+
 ## 🗂 Project structure
 
 ```text
