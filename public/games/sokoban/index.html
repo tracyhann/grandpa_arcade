@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
+  <title>爷爷推箱子</title>
+  <style>
+    :root{
+      --bg:#FFF3E0;
+      --ui:#EF6C00;
+      --ui2:#E65100;
+      --wall:#A1887F;
+      --wall-dark:#6D4C41;
+      --floor:#FFE6C4;
+      --floor2:#FFDDB0;
+      --goal:#E53935;
+      --cream:#FFF8E1;
+      --accent:#FF6F00;
+      --danger:#D84315;
+      --ok:#2E7D32;
+      --text:#5D4037;
+    }
+
+    html,body{
+      margin:0;
+      padding:0;
+      height:100%;
+      overflow:hidden;
+      background:var(--bg);
+      font-family:-apple-system,"Microsoft YaHei",sans-serif;
+      touch-action:manipulation;
+      -webkit-user-select:none;
+      user-select:none;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    /* 用 dvh 避免 iPad Safari 地址栏变化导致高度错乱 */
+    #app{
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      box-sizing:border-box;
+    }
+    @supports (height: 100dvh){ #app{ height:100dvh; } }
+
+    /* 顶部栏 */
+    #top-bar{
+      flex:0 0 auto;
+      height:clamp(72px, 12vh, 110px);
+      background:var(--ui);
+      border-bottom:6px solid var(--ui2);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:0 16px;
+      box-sizing:border-box;
+    }
+    .score-box{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:120px;
+    }
+    .score-box.right{ align-items:flex-end; text-align:right; }
+    .label{
+      font-size:clamp(16px, 2vw, 26px);
+      color:#FFE0B2;
+      font-weight:900;
+      letter-spacing:1px;
+      line-height:1.1;
+    }
+    .value{
+      font-size:clamp(30px, min(4.2vw, 5.5vh), 56px);
+      color:#fff;
+      font-weight:900;
+      font-family:"Courier New",monospace;
+      line-height:1;
+    }
+    .pill{
+      background:#fff;
+      border:4px solid #FFCC80;
+      border-radius:999px;
+      padding:10px 18px;
+      font-weight:900;
+      color:var(--text);
+      font-size:clamp(18px, 2.4vw, 30px);
+      box-shadow:0 6px 0 rgba(0,0,0,0.15);
+      white-space:nowrap;
+    }
+
+    /* 通用按钮 */
+    .btn{
+      background:var(--accent);
+      color:#fff;
+      border:none;
+      border-radius:999px;
+      padding:12px 22px;
+      font-weight:900;
+      font-size:clamp(20px, 2.6vw, 32px);
+      box-shadow:0 8px 0 #E65100;
+      cursor:pointer;
+      font-family:inherit;
+      white-space:nowrap;
+    }
+    .btn:active{ transform:translateY(8px); box-shadow:none; }
+    .btn.secondary{ background:#455A64; box-shadow:0 8px 0 #263238; }
+    .btn.good{ background:#43A047; box-shadow:0 8px 0 #1B5E20; }
+    .btn.monkey{ background:#8E44AD; box-shadow:0 8px 0 #5B2C6F; }
+    .btn.pulse{ animation:btnPulse 0.5s ease-in-out infinite alternate; }
+    @keyframes btnPulse{
+      from{ transform:scale(1); }
+      to  { transform:scale(1.1); filter:brightness(1.15); }
+    }
+
+    /* 主区域：横屏左右，竖屏上下 */
+    #main{
+      flex:1;
+      min-height:0;
+      display:flex;
+      gap:clamp(10px, 2vw, 28px);
+      padding:clamp(10px, 1.6vw, 22px);
+      box-sizing:border-box;
+    }
+    #board-wrap{
+      flex:1;
+      min-width:0;
+      min-height:0;
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    #board{
+      position:relative;
+      touch-action:none;
+    }
+
+    /* 格子 */
+    .tile{
+      position:absolute;
+      box-sizing:border-box;
+    }
+    .tile.floor{ background:var(--floor); }
+    .tile.floor.alt{ background:var(--floor2); }
+    .tile.wall{
+      background:
+        linear-gradient(var(--wall-dark), var(--wall-dark)) 0 48%/100% 6% no-repeat,
+        linear-gradient(90deg, transparent 47%, var(--wall-dark) 47%, var(--wall-dark) 53%, transparent 53%) 0 0/100% 48% no-repeat,
+        var(--wall);
+      border-radius:14%;
+      box-shadow: inset 0 -6px 0 rgba(0,0,0,0.25), inset 0 4px 0 rgba(255,255,255,0.25);
+    }
+    .tile.goal::after{
+      content:"";
+      position:absolute;
+      inset:16%;
+      border-radius:50%;
+      border:calc(var(--cell) * 0.08) solid var(--goal);
+      background:rgba(229,57,53,0.12);
+      animation:goalPulse 1s ease-in-out infinite alternate;
+    }
+    @keyframes goalPulse{
+      from{ transform:scale(0.9); opacity:0.75; }
+      to  { transform:scale(1.04); opacity:1; }
+    }
+
+    /* 爷爷 & 箱子 */
+    .ent{
+      position:absolute;
+      left:0;
+      top:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition:transform 0.16s ease-out;
+      pointer-events:none;
+    }
+    .no-anim .ent{ transition:none; }
+    .ent .face{
+      display:block;
+      line-height:1;
+      filter:drop-shadow(0 4px 0 rgba(0,0,0,0.18));
+    }
+    .ent.player{ z-index:3; }
+    .ent.box{ z-index:2; }
+    .ent.box.on{
+      background:radial-gradient(circle, rgba(76,175,80,0.55) 0%, rgba(76,175,80,0.0) 70%);
+      border-radius:50%;
+    }
+    .ent.box.on::after{
+      content:"✅";
+      position:absolute;
+      right:2%;
+      bottom:2%;
+      font-size:calc(var(--cell) * 0.32);
+      line-height:1;
+    }
+
+    /* 控制区 */
+    #controls{
+      flex:0 0 auto;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:clamp(14px, 2.4vh, 28px);
+      --k: clamp(64px, min(12vh, 11vw), 120px);
+    }
+    .dpad{
+      display:grid;
+      grid-template-columns:repeat(3, var(--k));
+      grid-template-rows:repeat(3, var(--k));
+      gap:8px;
+    }
+    .arrow{
+      border:none;
+      border-radius:24%;
+      background:#fff;
+      color:var(--accent);
+      box-shadow:0 8px 0 #FFB74D;
+      cursor:pointer;
+      padding:18%;
+      touch-action:none;
+    }
+    .arrow svg{ width:100%; height:100%; display:block; }
+    .arrow:active, .arrow.pressed{ transform:translateY(8px); box-shadow:none; background:#FFE0B2; }
+    .arrow.up{ grid-column:2; grid-row:1; }
+    .arrow.left{ grid-column:1; grid-row:2; }
+    .arrow.right{ grid-column:3; grid-row:2; }
+    .arrow.down{ grid-column:2; grid-row:3; }
+    .arrow.left svg{ transform:rotate(-90deg); }
+    .arrow.right svg{ transform:rotate(90deg); }
+    .arrow.down svg{ transform:rotate(180deg); }
+    .dpad-center{
+      grid-column:2; grid-row:2;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:calc(var(--k) * 0.62);
+      line-height:1;
+    }
+    .actions{
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      width:100%;
+    }
+    .actions .btn{ width:100%; }
+
+    @media (orientation: portrait){
+      #main{ flex-direction:column; }
+      #controls{ flex-direction:row; gap:clamp(18px, 4vw, 48px); }
+      .actions{ width:auto; min-width:clamp(170px, 30vw, 260px); }
+    }
+    @media (orientation: landscape) and (max-height: 560px){
+      #controls{ flex-direction:row; }
+      .actions{ width:auto; }
+    }
+
+    /* 提示条 */
+    #toast{
+      position:absolute;
+      left:50%;
+      top:4px;
+      transform:translateX(-50%);
+      background:rgba(255,255,255,0.96);
+      border:6px solid #FFCC80;
+      border-radius:24px;
+      padding:10px 18px;
+      font-weight:900;
+      color:var(--text);
+      font-size:clamp(20px, 2.6vw, 32px);
+      z-index:40;
+      display:none;
+      max-width:92%;
+      text-align:center;
+      box-shadow:0 8px 0 rgba(0,0,0,0.12);
+      white-space:nowrap;
+    }
+
+    /* 飘字 */
+    .float-text{
+      position:absolute;
+      left:50%;
+      top:40%;
+      font-size:clamp(44px, 7vw, 90px);
+      font-weight:900;
+      color:#FFEB3B;
+      text-shadow:4px 4px 0 #BF360C;
+      pointer-events:none;
+      animation:floatUp 1.2s forwards;
+      z-index:50;
+      white-space:nowrap;
+    }
+    @keyframes floatUp{
+      0%{ transform:translateX(-50%) translateY(0) scale(0.8); opacity:1; }
+      50%{ transform:translateX(-50%) translateY(-60px) scale(1.15); opacity:1; }
+      100%{ transform:translateX(-50%) translateY(-130px) scale(1); opacity:0; }
+    }
+
+    /* 弹窗 */
+    #modal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.78);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:100;
+      padding:16px;
+    }
+    .modal-content{
+      background:var(--cream);
+      border:10px solid var(--accent);
+      border-radius:40px;
+      width:min(680px, 96vw);
+      max-height:94vh;
+      overflow:auto;
+      padding:28px 22px;
+      text-align:center;
+      box-shadow:0 18px 0 rgba(0,0,0,0.35);
+      box-sizing:border-box;
+    }
+    .modal-content h2{
+      font-size:clamp(34px, 4.8vw, 64px);
+      margin:0 0 14px 0;
+      color:#BF360C;
+      font-weight:900;
+      letter-spacing:2px;
+    }
+    .modal-content p{
+      font-size:clamp(22px, 2.8vw, 34px);
+      color:var(--text);
+      margin:10px 0 18px 0;
+      font-weight:900;
+      line-height:1.45;
+    }
+    .row{
+      display:flex;
+      gap:16px;
+      justify-content:center;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+    .big-emoji{
+      font-size:clamp(60px, 9vw, 110px);
+      line-height:1.1;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div id="top-bar">
+      <div class="score-box">
+        <div class="label">关卡</div>
+        <div class="value" id="level-value">1</div>
+      </div>
+
+      <div class="pill" id="box-pill">📦 0 / 1 推好了</div>
+
+      <div class="score-box right">
+        <div class="label">步数</div>
+        <div class="value" id="moves-value">0</div>
+      </div>
+    </div>
+
+    <div id="main">
+      <div id="board-wrap">
+        <div id="board"></div>
+        <div id="toast"></div>
+      </div>
+
+      <div id="controls">
+        <div class="dpad">
+          <button class="arrow up" data-dir="up" aria-label="往上走"></button>
+          <button class="arrow left" data-dir="left" aria-label="往左走"></button>
+          <div class="dpad-center">👴</div>
+          <button class="arrow right" data-dir="right" aria-label="往右走"></button>
+          <button class="arrow down" data-dir="down" aria-label="往下走"></button>
+        </div>
+
+        <div class="actions">
+          <button class="btn secondary" id="undo-btn">↩️ 退一步</button>
+          <button class="btn" id="reset-btn">🔄 重来</button>
+          <button class="btn monkey" id="hint-btn">🐵 帮一步</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal">
+      <div class="modal-content" id="start-screen">
+        <h2>👴 爷爷推箱子</h2>
+        <div class="big-emoji">👴📦⭕</div>
+        <p>
+          把 📦 推到 ⭕ 上，<br>
+          全部推好就过关！<br>
+          <span style="color:#D84315;">推错了点「退一步」就行 ✅</span>
+        </p>
+        <div class="row">
+          <button class="btn good" id="start-btn">开始推箱子</button>
+          <button class="btn secondary" id="from-one-btn" style="display:none;">从第 1 关开始</button>
+        </div>
+      </div>
+
+      <div class="modal-content" id="level-screen" style="display:none;">
+        <h2 id="level-title">过关啦！</h2>
+        <div class="big-emoji">🎉</div>
+        <p id="level-msg">用了 0 步</p>
+        <div class="row">
+          <button class="btn good" id="next-btn">下一关 ➡️</button>
+          <button class="btn secondary" id="again-btn">再玩一次</button>
+        </div>
+      </div>
+
+      <div class="modal-content" id="all-done-screen" style="display:none;">
+        <h2>🏆 全部通关！</h2>
+        <div class="big-emoji">👴💪📦</div>
+        <p>爷爷力气真大！<br>所有箱子都推好啦！</p>
+        <div class="row">
+          <button class="btn good" id="replay-btn">从第 1 关再玩</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // 关卡：# 墙  . 目标  $ 箱子  @ 爷爷  * 箱子在目标上  + 爷爷在目标上
+  // 每一关都用求解器验证过可以完成，从易到难
+  const LEVELS = [
+    [
+      "########",
+      "#@ $  .#",
+      "########",
+    ],
+    [
+      "######",
+      "#@   #",
+      "# $  #",
+      "#    #",
+      "#  . #",
+      "######",
+    ],
+    [
+      "#######",
+      "#@    #",
+      "# $ # #",
+      "#   # #",
+      "#  .  #",
+      "#######",
+    ],
+    [
+      "  #####",
+      "  #. .#",
+      "### $ #",
+      "#  $  #",
+      "# @ # #",
+      "#     #",
+      "#######",
+    ],
+    [
+      "#######",
+      "#. @  #",
+      "# $$  #",
+      "#.    #",
+      "#######",
+    ],
+    [
+      "#######",
+      "#.  # #",
+      "# $   #",
+      "#  #$ #",
+      "#@  . #",
+      "#######",
+    ],
+    [
+      "########",
+      "#      #",
+      "#@ $  .#",
+      "#      #",
+      "#  $  .#",
+      "#      #",
+      "########",
+    ],
+    [
+      "  ####",
+      "###  #",
+      "#. $ #",
+      "#. $ ##",
+      "#. $@ #",
+      "#     #",
+      "#######",
+    ],
+    [
+      "########",
+      "#  .   #",
+      "# $$$  #",
+      "#  @   #",
+      "# .  . #",
+      "########",
+    ],
+    [
+      "########",
+      "#  .   #",
+      "#  ##  #",
+      "# $  $ #",
+      "#. @   #",
+      "########",
+    ],
+    [
+      "#########",
+      "#   .   #",
+      "# $ # $ #",
+      "#. @$ . #",
+      "#   #   #",
+      "#########",
+    ],
+    [
+      "  ######",
+      "  #    #",
+      "###$#  #",
+      "#  @ $ #",
+      "# #. . #",
+      "#   .$ #",
+      "########",
+    ],
+    [
+      "  #####",
+      "###   #",
+      "#@ $  #",
+      "# $ ###",
+      "#  ..#",
+      "######",
+    ],
+    [
+      "########",
+      "#   #  #",
+      "# $   $#",
+      "#  ##  #",
+      "#. @  .#",
+      "#  $   #",
+      "#   .  #",
+      "########",
+    ],
+    [
+      " #######",
+      " #  .  #",
+      " # ##  #",
+      "## @   #",
+      "# $$  .#",
+      "#      #",
+      "########",
+    ],
+  ];
+
+  const PRAISE = ["爷爷真棒！", "爷爷力气真大！", "推得真好！", "太厉害啦！", "爷爷是推箱子高手！"];
+  const SAVE_KEY = "grandpa_sokoban_level";
+
+  const elBoard = document.getElementById("board");
+  const elWrap = document.getElementById("board-wrap");
+  const elToast = document.getElementById("toast");
+  const elLevel = document.getElementById("level-value");
+  const elMoves = document.getElementById("moves-value");
+  const elBoxPill = document.getElementById("box-pill");
+
+  const modal = document.getElementById("modal");
+  const startScreen = document.getElementById("start-screen");
+  const levelScreen = document.getElementById("level-screen");
+  const allDoneScreen = document.getElementById("all-done-screen");
+
+  const btnStart = document.getElementById("start-btn");
+  const btnFromOne = document.getElementById("from-one-btn");
+  const btnNext = document.getElementById("next-btn");
+  const btnAgain = document.getElementById("again-btn");
+  const btnReplay = document.getElementById("replay-btn");
+  const btnUndo = document.getElementById("undo-btn");
+  const btnReset = document.getElementById("reset-btn");
+  const btnHint = document.getElementById("hint-btn");
+
+  const DIRS = {
+    up:    { dx: 0,  dy: -1 },
+    down:  { dx: 0,  dy: 1 },
+    left:  { dx: -1, dy: 0 },
+    right: { dx: 1,  dy: 0 },
+  };
+
+  // 本地音效（找不到也不报错）
+  const sfxGoal = new Audio("./assets/correct.mp3");
+  sfxGoal.preload = "auto";
+  const sfxWin = new Audio("./assets/win.mp3");
+  sfxWin.preload = "auto";
+
+  function playSfx(a){
+    try{ a.currentTime = 0; a.play().catch(()=>{}); }catch(e){}
+  }
+
+  // 语音播报（可选）
+  function speak(text){
+    if (!("speechSynthesis" in window)) return;
+    try{
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "zh-CN";
+      u.rate = 0.95;
+      u.pitch = 1.05;
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  }
+
+  function loadSaved(){
+    try{
+      const n = parseInt(localStorage.getItem(SAVE_KEY), 10);
+      if (n >= 1 && n <= LEVELS.length) return n;
+    }catch(e){}
+    return 1;
+  }
+  function save(n){
+    try{ localStorage.setItem(SAVE_KEY, String(n)); }catch(e){}
+  }
+
+  // 当前关卡数据（格子用 y*W+x 表示）
+  let levelNo = 1;
+  let W = 0, H = 0;
+  let walls = new Set();
+  let goals = new Set();
+  let floor = new Set();
+  let player = 0;
+  let boxes = [];
+  let startState = null;
+  let history = [];
+  let moves = 0;
+
+  let cell = 60;
+  let playing = false;   // 弹窗打开时不能走
+  let busy = false;      // 猴子帮忙演示时不能走
+
+  let playerEl = null;
+  let boxEls = [];
+
+  function parseLevel(rows){
+    H = rows.length;
+    W = Math.max(...rows.map(r => r.length));
+    walls = new Set(); goals = new Set(); floor = new Set();
+    boxes = [];
+    player = 0;
+
+    for (let y = 0; y < H; y++){
+      for (let x = 0; x < W; x++){
+        const c = rows[y][x] || " ";
+        const i = y * W + x;
+        if (c === "#") walls.add(i);
+        if (c === "." || c === "*" || c === "+") goals.add(i);
+        if (c === "$" || c === "*") boxes.push(i);
+        if (c === "@" || c === "+") player = i;
+      }
+    }
+
+    // 从爷爷出发涂色，算出墙里面的地板（墙外面的空格不画）
+    const stack = [player];
+    floor.add(player);
+    while (stack.length){
+      const i = stack.pop();
+      const x = i % W, y = Math.floor(i / W);
+      for (const d of Object.values(DIRS)){
+        const nx = x + d.dx, ny = y + d.dy;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const n = ny * W + nx;
+        if (walls.has(n) || floor.has(n)) continue;
+        floor.add(n);
+        stack.push(n);
+      }
+    }
+  }
+
+  function step(i, d){
+    const x = i % W + d.dx, y = Math.floor(i / W) + d.dy;
+    if (x < 0 || y < 0 || x >= W || y >= H) return -1;
+    return y * W + x;
+  }
+
+  function buildBoard(){
+    elBoard.innerHTML = "";
+    for (let i = 0; i < W * H; i++){
+      const isWall = walls.has(i);
+      if (!isWall && !floor.has(i)) continue;
+      const t = document.createElement("div");
+      const x = i % W, y = Math.floor(i / W);
+      t.className = "tile " + (isWall ? "wall" : "floor" + ((x + y) % 2 ? " alt" : ""));
+      if (goals.has(i)) t.classList.add("goal");
+      t.dataset.i = i;
+      elBoard.appendChild(t);
+    }
+
+    boxEls = boxes.map(() => {
+      const b = document.createElement("div");
+      b.className = "ent box";
+      b.innerHTML = '<span class="face">📦</span>';
+      elBoard.appendChild(b);
+      return b;
+    });
+
+    playerEl = document.createElement("div");
+    playerEl.className = "ent player";
+    playerEl.innerHTML = '<span class="face">👴</span>';
+    elBoard.appendChild(playerEl);
+  }
+
+  function layout(){
+    if (!W) return;
+    const rect = elWrap.getBoundingClientRect();
+    cell = Math.floor(Math.min(rect.width / W, (rect.height - 8) / H, 130));
+    cell = Math.max(cell, 24);
+
+    elBoard.style.width = (W * cell) + "px";
+    elBoard.style.height = (H * cell) + "px";
+    elBoard.style.setProperty("--cell", cell + "px");
+
+    elBoard.classList.add("no-anim");
+    for (const t of elBoard.querySelectorAll(".tile")){
+      const i = +t.dataset.i;
+      t.style.left = (i % W) * cell + "px";
+      t.style.top = Math.floor(i / W) * cell + "px";
+      t.style.width = cell + "px";
+      t.style.height = cell + "px";
+    }
+    for (const el of [playerEl, ...boxEls]){
+      el.style.width = cell + "px";
+      el.style.height = cell + "px";
+    }
+    playerEl.querySelector(".face").style.fontSize = Math.round(cell * 0.78) + "px";
+    for (const b of boxEls) b.querySelector(".face").style.fontSize = Math.round(cell * 0.74) + "px";
+    render();
+    void elBoard.offsetWidth;
+    elBoard.classList.remove("no-anim");
+  }
+
+  function place(el, i){
+    el.style.transform = `translate(${(i % W) * cell}px, ${Math.floor(i / W) * cell}px)`;
+  }
+
+  function render(){
+    place(playerEl, player);
+    let done = 0;
+    boxes.forEach((b, k) => {
+      place(boxEls[k], b);
+      const on = goals.has(b);
+      boxEls[k].classList.toggle("on", on);
+      if (on) done++;
+    });
+    elMoves.textContent = moves;
+    elBoxPill.textContent = `📦 ${done} / ${boxes.length} 推好了`;
+    btnUndo.disabled = history.length === 0;
+    btnUndo.style.opacity = history.length ? "1" : "0.5";
+  }
+
+  function toast(msg, ms = 1600){
+    elToast.textContent = msg;
+    elToast.style.display = "block";
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => elToast.style.display = "none", ms);
+  }
+
+  function floatText(text){
+    const el = document.createElement("div");
+    el.className = "float-text";
+    el.textContent = text;
+    elWrap.appendChild(el);
+    setTimeout(() => el.remove(), 1200);
+  }
+
+  function nudge(el, d){
+    const face = el.querySelector(".face");
+    try{
+      face.animate([
+        { transform: "translate(0,0)" },
+        { transform: `translate(${d.dx * 10}px, ${d.dy * 10}px)` },
+        { transform: "translate(0,0)" },
+      ], { duration: 180 });
+    }catch(e){}
+  }
+
+  function pop(el){
+    const face = el.querySelector(".face");
+    try{
+      face.animate([
+        { transform: "scale(1)" },
+        { transform: "scale(1.3)" },
+        { transform: "scale(1)" },
+      ], { duration: 320 });
+    }catch(e){}
+  }
+
+  function showModal(which){
+    playing = false;
+    modal.style.display = "flex";
+    startScreen.style.display = which === "start" ? "block" : "none";
+    levelScreen.style.display = which === "level" ? "block" : "none";
+    allDoneScreen.style.display = which === "all" ? "block" : "none";
+  }
+  function hideModal(){
+    modal.style.display = "none";
+    playing = true;
+  }
+
+  function loadLevel(n){
+    levelNo = n;
+    parseLevel(LEVELS[n - 1]);
+    startState = { player, boxes: boxes.slice() };
+    history = [];
+    moves = 0;
+    elLevel.textContent = `${n}`;
+    btnUndo.classList.remove("pulse");
+    buildBoard();
+    layout();
+  }
+
+  // ---------- 走路 & 推箱子 ----------
+  function tryMove(dirName){
+    const d = DIRS[dirName];
+    const n = step(player, d);
+    if (n < 0 || walls.has(n)){
+      nudge(playerEl, d);
+      if (navigator.vibrate) navigator.vibrate(30);
+      return false;
+    }
+
+    const k = boxes.indexOf(n);
+    if (k >= 0){
+      const n2 = step(n, d);
+      if (n2 < 0 || walls.has(n2) || boxes.includes(n2)){
+        nudge(playerEl, d);
+        nudge(boxEls[k], d);
+        toast("推不动～ 换个方向试试");
+        return false;
+      }
+      history.push({ player, boxes: boxes.slice(), moves });
+      boxes[k] = n2;
+      player = n;
+      moves++;
+      render();
+
+      if (goals.has(n2)){
+        playSfx(sfxGoal);
+        pop(boxEls[k]);
+        if (navigator.vibrate) navigator.vibrate(60);
+      }
+      if (isSolved()){
+        winLevel();
+      }else{
+        checkStuckSoon();
+      }
+      return true;
+    }
+
+    history.push({ player, boxes: boxes.slice(), moves });
+    player = n;
+    moves++;
+    render();
+    return true;
+  }
+
+  function isSolved(){
+    return boxes.every(b => goals.has(b));
+  }
+
+  function undo(){
+    if (!playing || busy) return;
+    const s = history.pop();
+    if (!s){
+      toast("已经退到最开始啦");
+      return;
+    }
+    player = s.player;
+    boxes = s.boxes;
+    moves = s.moves;
+    btnUndo.classList.remove("pulse");
+    render();
+  }
+
+  function resetLevel(){
+    if (!playing || busy) return;
+    player = startState.player;
+    boxes = startState.boxes.slice();
+    history = [];
+    moves = 0;
+    btnUndo.classList.remove("pulse");
+    render();
+    toast("重新开始这一关 🙂");
+  }
+
+  // ---------- 求解器：给猴子用 ----------
+  // 返回从当前局面到过关的走法（"up"/"down"/...），走不通返回 null
+  function solve(fromPlayer, fromBoxes, cap = 400000){
+    const key = (p, bs) => p + "|" + bs.slice().sort((a, b) => a - b).join(",");
+    const goalArr = [...goals];
+    const done = bs => bs.every(b => goals.has(b));
+
+    // 简单死角：箱子在不是目标的墙角里，肯定推不出来
+    const deadCorner = i => {
+      if (goals.has(i)) return false;
+      const u = walls.has(i - W), dn = walls.has(i + W);
+      const l = walls.has(i - 1), r = walls.has(i + 1);
+      return (u || dn) && (l || r);
+    };
+
+    const startKey = key(fromPlayer, fromBoxes);
+    if (done(fromBoxes)) return [];
+    const prev = new Map([[startKey, null]]);
+    const queue = [[fromPlayer, fromBoxes, startKey]];
+    let head = 0;
+    const names = Object.keys(DIRS);
+
+    while (head < queue.length){
+      const [p, bs, k] = queue[head++];
+      for (const name of names){
+        const d = DIRS[name];
+        const n = step(p, d);
+        if (n < 0 || walls.has(n)) continue;
+        let nbs = bs;
+        const bi = bs.indexOf(n);
+        if (bi >= 0){
+          const n2 = step(n, d);
+          if (n2 < 0 || walls.has(n2) || bs.includes(n2) || deadCorner(n2)) continue;
+          nbs = bs.slice();
+          nbs[bi] = n2;
+        }
+        const nk = key(n, nbs);
+        if (prev.has(nk)) continue;
+        prev.set(nk, [k, name]);
+        if (done(nbs)){
+          const path = [];
+          let cur = nk;
+          while (prev.get(cur)){
+            const [pk, mv] = prev.get(cur);
+            path.push(mv);
+            cur = pk;
+          }
+          return path.reverse();
+        }
+        if (prev.size > cap) return undefined; // 太复杂，算不过来
+        queue.push([n, nbs, nk]);
+      }
+    }
+    return null;
+  }
+
+  // 推完箱子后看看是不是卡死了，卡死就提醒退一步
+  function checkStuckSoon(){
+    setTimeout(() => {
+      if (!playing || busy) return;
+      if (solve(player, boxes) === null){
+        toast("哎呀，箱子卡住啦～ 点「退一步」", 2600);
+        btnUndo.classList.add("pulse");
+      }
+    }, 250);
+  }
+
+  // 🐵 帮一步：带爷爷走到下一次推箱子为止
+  function monkeyHelp(){
+    if (!playing || busy) return;
+
+    let path = solve(player, boxes);
+
+    if (path === null){
+      // 卡死了：猴子帮忙退回去，退到能过关为止
+      let undone = 0;
+      while (history.length && solve(player, boxes) === null){
+        const s = history.pop();
+        player = s.player; boxes = s.boxes; moves = s.moves;
+        undone++;
+      }
+      btnUndo.classList.remove("pulse");
+      render();
+      toast(undone ? `🐵 箱子卡住了，我帮爷爷退了 ${undone} 步` : "🐵 我们重来一次吧", 2400);
+      if (!undone) resetLevel();
+      return;
+    }
+    if (!path || !path.length){
+      toast("🐵 我也想不出来，爷爷点「重来」试试", 2400);
+      return;
+    }
+
+    // 找到第一次推箱子的那一步
+    let stop = path.length;
+    let p = player;
+    for (let i = 0; i < path.length; i++){
+      p = step(p, DIRS[path[i]]);
+      if (boxes.includes(p)){ stop = i + 1; break; }
+    }
+    const todo = path.slice(0, stop);
+
+    busy = true;
+    btnHint.classList.add("pulse");
+    toast("🐵 跟我来！", 1200);
+
+    let i = 0;
+    const tick = () => {
+      if (!playing){ busy = false; btnHint.classList.remove("pulse"); return; }
+      if (i >= todo.length){
+        busy = false;
+        btnHint.classList.remove("pulse");
+        if (playing) toast("🐵 该爷爷啦！", 1400);
+        return;
+      }
+      tryMove(todo[i++]);
+      setTimeout(tick, 260);
+    };
+    setTimeout(tick, 300);
+  }
+
+  function winLevel(){
+    playing = false;
+    playSfx(sfxWin);
+    floatText("🎉 过关！");
+    for (const b of boxEls) pop(b);
+
+    const next = Math.min(levelNo + 1, LEVELS.length);
+    if (levelNo >= LEVELS.length){
+      save(1);
+    }else if (loadSaved() < next){
+      save(next);
+    }
+
+    const praise = PRAISE[Math.floor(Math.random() * PRAISE.length)];
+    speak(praise + "过关啦！");
+
+    setTimeout(() => {
+      if (levelNo >= LEVELS.length){
+        showModal("all");
+        return;
+      }
+      document.getElementById("level-title").textContent = `第 ${levelNo} 关 完成！`;
+      document.getElementById("level-msg").innerHTML =
+        `${praise}<br>用了 ${moves} 步<br><span style="color:#D84315;">还有 ${LEVELS.length - levelNo} 关等着爷爷</span>`;
+      showModal("level");
+    }, 1100);
+  }
+
+  // ---------- 操作 ----------
+  function onDir(dirName){
+    if (!playing || busy) return;
+    btnUndo.classList.remove("pulse");
+    tryMove(dirName);
+  }
+
+  for (const b of document.querySelectorAll(".arrow")){
+    b.innerHTML = '<svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 8 L92 52 H66 V92 H34 V52 H8 Z" fill="currentColor"/></svg>';
+    b.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      b.classList.add("pressed");
+      onDir(b.dataset.dir);
+    });
+    const up = () => b.classList.remove("pressed");
+    b.addEventListener("pointerup", up);
+    b.addEventListener("pointerleave", up);
+    b.addEventListener("pointercancel", up);
+  }
+
+  // 点棋盘：点在爷爷哪边，就往哪边走一步
+  elBoard.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    if (!playing || busy) return;
+    const rect = elBoard.getBoundingClientRect();
+    const px = (player % W + 0.5) * cell;
+    const py = (Math.floor(player / W) + 0.5) * cell;
+    const dx = e.clientX - rect.left - px;
+    const dy = e.clientY - rect.top - py;
+    if (Math.abs(dx) < cell * 0.5 && Math.abs(dy) < cell * 0.5) return;
+    if (Math.abs(dx) > Math.abs(dy)) onDir(dx > 0 ? "right" : "left");
+    else onDir(dy > 0 ? "down" : "up");
+  });
+
+  window.addEventListener("keydown", e => {
+    const map = {
+      ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+      w: "up", s: "down", a: "left", d: "right",
+    };
+    if (map[e.key]){
+      e.preventDefault();
+      onDir(map[e.key]);
+    }else if (e.key === "z" || e.key === "Backspace"){
+      undo();
+    }
+  });
+
+  btnUndo.onclick = undo;
+  btnReset.onclick = resetLevel;
+  btnHint.onclick = monkeyHelp;
+
+  function begin(n){
+    loadLevel(n);
+    hideModal();
+    if (n === 1) toast("👉 点箭头，爷爷就会走", 2600);
+    else toast(`第 ${n} 关，加油！`, 1600);
+  }
+
+  btnStart.onclick = () => begin(loadSaved());
+  btnFromOne.onclick = () => { save(1); begin(1); };
+  btnNext.onclick = () => begin(Math.min(levelNo + 1, LEVELS.length));
+  btnAgain.onclick = () => begin(levelNo);
+  btnReplay.onclick = () => begin(1);
+
+  window.addEventListener("resize", () => layout(), { passive: true });
+
+  // kick
+  const saved = loadSaved();
+  if (saved > 1){
+    btnStart.textContent = `继续第 ${saved} 关`;
+    btnFromOne.style.display = "";
+  }
+  loadLevel(saved);
+  showModal("start");
+})();
+</script>
+
+</body>
+</html>

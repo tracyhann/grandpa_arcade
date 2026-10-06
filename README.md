@@ -23,6 +23,17 @@ Just a calm place to play a few friendly mini-games every day.
 - Friendly feedback + optional voice praise  
 - **Hint / Skip** so grandpa never gets stuck
 
+### ✅ 3) Push the Boxes (推箱子)
+- Grandpa 👴 pushes 📦 onto ⭕ — 15 gentle levels, all checked to be solvable
+- Giant arrow pad, or tap the side of the board he wants to walk to
+- **退一步 (undo)** and **重来 (restart)** anytime; a 🐵 helper can walk him to the next push
+- Notices when a box is stuck for good and suggests 退一步; remembers which level he reached
+
+### ✅ 4) Grandpa vs. Monkey (爷爷战猴子)
+- A drawing race: grandpa traces a dotted picture (sun, heart, star, house…) while 🐵 draws the same one
+- The closer the trace, the higher the score; best of 5 rounds
+- No timer — the monkey finishes and waits; **擦掉重画** wipes the page to try again
+
 ---
 
 ## 🧓 Design principles (Grandpa-first)

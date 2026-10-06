@@ -46,7 +46,7 @@ export const GAMES_LIST = [
   },
   {
     id: "sokoban",
-    title: "推箱子 COMING SOON",
+    title: "推箱子",
     hint: "力气活儿",
     iconKey: "sokoban",
     iconClass: "text-orange-500",
@@ -68,7 +68,7 @@ export const GAMES_LIST = [
   },
   {
     id: "monkey-doodle",
-    title: "爷爷战猴子 COMING SOON",
+    title: "爷爷战猴子",
     hint: "快乐涂鸦",
     iconKey: "monkey-doodle",
     iconClass: "text-pink-500",
